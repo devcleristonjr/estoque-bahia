@@ -23,7 +23,7 @@
             <td>{{ ponto.municipio.territorio.nome }}</td>
             <td>{{ ponto.responsavel_nome or '-' }}</td>
             <td>{{ '%.0f'|format(banner_totals.get(ponto.id, 0)) }}</td>
-            <td>{{ ponto.updated_at.strftime('%d/%m/%Y %H:%M') if ponto.updated_at else '-' }}</td>
+            <td>{{ ponto.updated_at|datahora_bahia('%d/%m/%Y %H:%M') }}</td>
             <td class="d-flex gap-2 flex-wrap">
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('estoques.detail', ponto_id=ponto.id) }}">Visualizar</a>
               <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('estoques.edit', ponto_id=ponto.id) }}">Editar</a>

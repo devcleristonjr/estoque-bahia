@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import datetime
 
 from app import create_app
 from app.extensions import db
@@ -8,6 +9,7 @@ from app.models.municipio import Municipio
 from app.models.ponto_estoque import PontoEstoque
 from app.models.territorio import Territorio
 from app.models.usuario import Usuario
+from app.timezone import formatar_datahora_bahia
 from app.utils import parse_coordinate_pair
 from config import TestingConfig
 
@@ -167,6 +169,10 @@ def test_multiple_points_are_returned_by_map_api():
     assert response.status_code == 200
     assert isinstance(payload, list)
     assert {item["nome"] for item in payload} >= {"Ponto A", "Ponto B"}
+
+
+def test_naive_datetime_is_treated_as_bahia_local_time():
+    assert formatar_datahora_bahia(datetime(2026, 9, 18, 10, 30)) == "18/09/2026 10:30"
 
 
 def test_edit_stock_point_without_new_photo_does_not_crash():
@@ -342,6 +348,62 @@ def test_admin_can_delete_point_and_operator_cannot():
     assert "Excluir" not in operator_page.get_data(as_text=True)
     forbidden_response = operador_client.post(
         f"/estoques/{protected_point_id}/excluir",
+        data={"csrf_token": "invalid"},
+        follow_redirects=False,
+    )
+    assert forbidden_response.status_code == 403
+
+
+def test_admin_can_delete_material_and_operator_cannot():
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        admin = Usuario(nome="Admin", email="admin@example.com", perfil="ADMIN", ativo=True)
+        admin.set_password("123456")
+        operador = Usuario(nome="Operador", email="operador@example.com", perfil="OPERADOR", ativo=True)
+        operador.set_password("123456")
+        db.session.add_all([admin, operador])
+
+        material = Material(nome="Material para excluir", unidade="un", ativo=True)
+        db.session.add(material)
+        db.session.commit()
+        material_id = material.id
+
+    admin_client = app.test_client()
+    admin_client.post(
+        "/login",
+        data={"email": "admin@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+    admin_page = admin_client.get("/materiais/")
+    csrf_match = __import__("re").search(r'name="csrf_token" value="([^"]+)"', admin_page.get_data(as_text=True))
+    assert csrf_match is not None
+    delete_response = admin_client.post(
+        f"/materiais/{material_id}/excluir",
+        data={"csrf_token": csrf_match.group(1)},
+        follow_redirects=True,
+    )
+    assert delete_response.status_code == 200
+
+    with app.app_context():
+        assert db.session.get(Material, material_id) is None
+
+    with app.app_context():
+        protected_material = Material(nome="Material protegido", unidade="un", ativo=True)
+        db.session.add(protected_material)
+        db.session.commit()
+        protected_material_id = protected_material.id
+
+    operador_client = app.test_client()
+    operador_client.post(
+        "/login",
+        data={"email": "operador@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+    operator_page = operador_client.get("/materiais/")
+    assert "Excluir" not in operator_page.get_data(as_text=True)
+    forbidden_response = operador_client.post(
+        f"/materiais/{protected_material_id}/excluir",
         data={"csrf_token": "invalid"},
         follow_redirects=False,
     )

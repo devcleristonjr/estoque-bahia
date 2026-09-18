@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, flash, render_template, request
@@ -12,6 +11,7 @@ from app.models.estoque_material import EstoqueMaterial
 from app.models.material import Material
 from app.models.ponto_estoque import PontoEstoque
 from app.services import update_stock
+from app.timezone import agora_bahia
 from app.utils import parse_coordinate_to_decimal, save_uploaded_image
 
 
@@ -194,7 +194,7 @@ def coleta_form(token: str):
     db.session.add(coleta_registro)
 
     # Force point freshness for dashboard recency ordering.
-    ponto.updated_at = datetime.now(timezone.utc)
+    ponto.updated_at = agora_bahia()
 
     db.session.commit()
     flash("Atualização registrada com sucesso.", "success")

@@ -4,7 +4,6 @@ import re
 import secrets
 import uuid
 import json
-from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import urlencode
@@ -12,6 +11,7 @@ from urllib.request import Request, urlopen
 
 from flask import current_app
 from werkzeug.utils import secure_filename
+from app.timezone import agora_bahia
 
 
 PHONE_DIGITS_RE = re.compile(r"\D+")
@@ -170,7 +170,7 @@ def save_uploaded_image(file_storage, category: str = "estoque") -> str:
 
     safe_name = secure_filename(file_storage.filename)
     name_part, extension = safe_name.rsplit(".", 1)
-    timestamp = datetime.now().strftime("%Y/%m")
+    timestamp = agora_bahia().strftime("%Y/%m")
     relative_dir = Path("uploads") / category / timestamp
     absolute_dir = Path(current_app.config["UPLOAD_FOLDER"]) / category / timestamp
     absolute_dir.mkdir(parents=True, exist_ok=True)

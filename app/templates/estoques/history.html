@@ -18,7 +18,7 @@
       <tbody>
         {% for mov in movimentacoes %}
           <tr>
-            <td>{{ mov.created_at.strftime('%d/%m/%Y %H:%M') if mov.created_at else '-' }}</td>
+            <td>{{ mov.created_at|datahora_bahia('%d/%m/%Y %H:%M') }}</td>
             <td>{{ mov.origem }}</td>
             <td>{{ mov.usuario.nome if mov.usuario else 'Coleta web' }}</td>
             <td>{{ mov.material.nome }}</td>

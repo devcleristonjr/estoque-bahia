@@ -118,7 +118,7 @@
           <tbody>
             {% for mov in metrics.recent_movements %}
               <tr>
-                <td>{{ mov.created_at.strftime('%d/%m/%Y %H:%M') if mov.created_at else '-' }}</td>
+                <td>{{ mov.created_at|datahora_bahia('%d/%m/%Y %H:%M') }}</td>
                 <td>{{ mov.usuario.nome }}</td>
                 <td>{{ mov.ponto_estoque.nome }}</td>
                 <td>{{ mov.material.nome }}</td>

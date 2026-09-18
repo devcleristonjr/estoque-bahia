@@ -21,13 +21,19 @@
             <td class="fw-semibold">{{ material.nome }}</td>
             <td>{{ material.unidade or '-' }}</td>
             <td>{{ 'Sim' if material.ativo else 'Não' }}</td>
-            <td>{{ material.updated_at.strftime('%d/%m/%Y %H:%M') if material.updated_at else '-' }}</td>
+            <td>{{ material.updated_at|datahora_bahia('%d/%m/%Y %H:%M') }}</td>
             <td class="d-flex gap-2">
               <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('materiais.edit', material_id=material.id) }}">Editar</a>
               <form method="post" action="{{ url_for('materiais.deactivate', material_id=material.id) }}" onsubmit="return confirm('Desativar este material?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Desativar</button>
               </form>
+              {% if current_user.is_admin %}
+                <form method="post" action="{{ url_for('materiais.delete', material_id=material.id) }}" onsubmit="return confirm('Excluir este material permanentemente?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-danger" type="submit">Excluir</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% else %}

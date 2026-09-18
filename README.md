@@ -49,6 +49,8 @@ pip install -r requirements.txt
 flask --app run.py db upgrade
 ```
 
+Inclui também a tabela de controle do fechamento diário para evitar execução duplicada.
+
 Se você quiser voltar para PostgreSQL no futuro, basta trocar `DATABASE_URL` para o formato `postgresql+psycopg://usuario:senha@host:5432/banco`.
 
 Se precisar criar um novo administrador inicial:
@@ -57,10 +59,42 @@ Se precisar criar um novo administrador inicial:
 flask --app run.py create-admin
 ```
 
+Para executar manualmente o fechamento diário de estoque (mesma rotina usada em produção):
+
+```bash
+flask --app run.py zerar-estoques
+```
+
+Para testar com uma data específica (idempotência por data local da Bahia):
+
+```bash
+flask --app run.py zerar-estoques --data-referencia 2026-09-18
+```
+
 ## Execução
 
 ```bash
 flask --app run.py run
+```
+
+## Timezone oficial
+
+Todas as operações de data/hora usam timezone de Salvador/Bahia (`America/Bahia`, com fallback para `America/Sao_Paulo`).
+
+## Agendamento diário de zeramento (23:00 Bahia)
+
+O projeto não mantém scheduler interno no Flask (sem loop/sleep). O recomendado é agendar o comando CLI no sistema operacional do servidor.
+
+Exemplo Linux (cron):
+
+```bash
+0 23 * * * cd /caminho/estoque-bahia && TZ=America/Bahia flask --app run.py zerar-estoques >> /var/log/estoque-bahia-reset.log 2>&1
+```
+
+Exemplo Windows (Task Scheduler):
+
+```powershell
+schtasks /Create /TN "EstoqueBahia-ZeramentoDiario" /SC DAILY /ST 23:00 /TR "cmd /c cd /d C:\caminho\estoque-bahia && flask --app run.py zerar-estoques >> logs\zeramento.log 2>&1"
 ```
 
 ## Importação geográfica

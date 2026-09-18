@@ -8,6 +8,7 @@ from flask import Flask, render_template
 from openpyxl import load_workbook
 
 from app.extensions import csrf, db, login_manager, migrate
+from app.models.fechamento_diario_estoque import FechamentoDiarioEstoque
 from app.models.municipio import Municipio
 from app.models.usuario import Usuario
 from app.routes.administracao import municipios_bp, territorios_bp, usuarios_bp
@@ -20,6 +21,7 @@ from app.routes.estoques import estoques_bp
 from app.routes.files import files_bp
 from app.routes.materiais import materiais_bp
 from app.commands import register_commands
+from app.timezone import formatar_datahora_bahia
 from config import get_config
 
 
@@ -104,6 +106,10 @@ def create_app(config_object: type | None = None) -> Flask:
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para continuar."
     login_manager.login_message_category = "warning"
+
+    @app.template_filter("datahora_bahia")
+    def datahora_bahia_filter(value, pattern: str = "%d/%m/%Y %H:%M"):
+        return formatar_datahora_bahia(value, pattern)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)

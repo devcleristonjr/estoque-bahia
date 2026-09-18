@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
 import unicodedata
@@ -15,6 +14,7 @@ from app.models.material import Material
 from app.models.municipio import Municipio
 from app.models.ponto_estoque import PontoEstoque
 from app.services import update_stock
+from app.timezone import agora_bahia
 from app.utils import (
     digits_only,
     geocode_address_coordinates,
@@ -322,7 +322,7 @@ def novo():  # NOSONAR
     )
     db.session.add(coleta_registro)
 
-    ponto.updated_at = datetime.now(timezone.utc)
+    ponto.updated_at = agora_bahia()
     db.session.commit()
 
     estoque = _material_rows_for_point(ponto)
@@ -474,7 +474,7 @@ def atualizar_form(ponto_id: int):  # NOSONAR
         origem="COLETA_WEB",
     )
     db.session.add(coleta_registro)
-    ponto.updated_at = datetime.now(timezone.utc)
+    ponto.updated_at = agora_bahia()
     db.session.commit()
 
     estoque_atualizado = _material_rows_for_point(ponto)

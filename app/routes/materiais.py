@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.forms import MaterialForm
@@ -64,4 +65,22 @@ def deactivate(material_id: int):
     material.ativo = False
     db.session.commit()
     flash("Material desativado.", "info")
+    return redirect(url_for(MATERIAIS_INDEX_ENDPOINT))
+
+
+@materiais_bp.route("/<int:material_id>/excluir", methods=["POST"])
+@login_required
+@admin_required
+def delete(material_id: int):
+    material = Material.query.get_or_404(material_id)
+    try:
+        db.session.delete(material)
+        db.session.commit()
+        flash("Material excluído permanentemente.", "warning")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            "Não foi possível excluir este material porque ele possui vínculos com estoque ou histórico.",
+            "danger",
+        )
     return redirect(url_for(MATERIAIS_INDEX_ENDPOINT))

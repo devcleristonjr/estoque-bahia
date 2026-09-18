@@ -41,7 +41,7 @@
             <button id="copiar-coleta-link" class="btn btn-outline-secondary" type="button">Copiar link</button>
           </div>
         </div>
-        <div class="mb-2"><strong>Atualizado em:</strong> {{ ponto.updated_at.strftime('%d/%m/%Y %H:%M') if ponto.updated_at else '-' }}</div>
+        <div class="mb-2"><strong>Atualizado em:</strong> {{ ponto.updated_at|datahora_bahia('%d/%m/%Y %H:%M') }}</div>
         <div class="mb-0"><strong>Observações:</strong> {{ ponto.observacoes or '-' }}</div>
       </div>
     </div>
