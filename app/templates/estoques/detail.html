@@ -27,6 +27,14 @@
         <div class="mb-2"><strong>Telefone:</strong> {{ ponto.responsavel_telefone or '-' }}</div>
         <div class="mb-2"><strong>WhatsApp:</strong> {{ ponto.responsavel_whatsapp or '-' }}</div>
         <div class="mb-2"><strong>Endereço:</strong> {{ ponto.endereco or '-' }}</div>
+        <div class="mb-2">
+          <strong>Link de coleta:</strong>
+          <label for="coleta-link" class="visually-hidden">Link de coleta</label>
+          <div class="input-group input-group-sm mt-1">
+            <input id="coleta-link" type="text" class="form-control" readonly title="Link de coleta" placeholder="Link de coleta" value="{{ url_for('coleta.coleta_form', token=ponto.coleta_token, _external=True) }}">
+            <button id="copiar-coleta-link" class="btn btn-outline-secondary" type="button">Copiar link</button>
+          </div>
+        </div>
         <div class="mb-2"><strong>Atualizado em:</strong> {{ ponto.updated_at.strftime('%d/%m/%Y %H:%M') if ponto.updated_at else '-' }}</div>
         <div class="mb-0"><strong>Observações:</strong> {{ ponto.observacoes or '-' }}</div>
       </div>
@@ -55,4 +63,28 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const btn = document.getElementById("copiar-coleta-link");
+    const input = document.getElementById("coleta-link");
+    if (!btn || !input) return;
+
+    btn.addEventListener("click", async function () {
+      try {
+        await navigator.clipboard.writeText(input.value);
+        btn.textContent = "Copiado";
+        setTimeout(function () { btn.textContent = "Copiar link"; }, 1200);
+      } catch (_error) {
+        // Fallback for browsers without clipboard API permissions.
+        input.select();
+        document.execCommand("copy");
+        btn.textContent = "Copiado";
+        setTimeout(function () { btn.textContent = "Copiar link"; }, 1200);
+      }
+    });
+  })();
+</script>
 {% endblock %}

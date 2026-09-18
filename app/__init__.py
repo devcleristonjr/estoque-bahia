@@ -12,6 +12,7 @@ from app.models.municipio import Municipio
 from app.models.usuario import Usuario
 from app.routes.administracao import municipios_bp, territorios_bp, usuarios_bp
 from app.routes.api import api_bp
+from app.routes.coleta import coleta_bp
 from app.routes.auth import auth_bp
 from app.routes.dashboard import dashboard_bp
 from app.routes.estoques import estoques_bp
@@ -106,6 +107,7 @@ def create_app(config_object: type | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(estoques_bp)
+    app.register_blueprint(coleta_bp)
     app.register_blueprint(materiais_bp)
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(territorios_bp)

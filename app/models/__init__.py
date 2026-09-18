@@ -1,3 +1,4 @@
+from app.models.coleta_registro import ColetaRegistro
 from app.models.estoque_material import EstoqueMaterial
 from app.models.material import Material
 from app.models.movimentacao_estoque import MovimentacaoEstoque
@@ -7,6 +8,7 @@ from app.models.territorio import Territorio
 from app.models.usuario import Usuario
 
 __all__ = [
+	"ColetaRegistro",
 	"EstoqueMaterial",
 	"Material",
 	"MovimentacaoEstoque",

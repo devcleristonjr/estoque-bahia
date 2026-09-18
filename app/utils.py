@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import secrets
 import uuid
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -138,3 +139,8 @@ def save_uploaded_image(file_storage, category: str = "estoque") -> str:
     absolute_path = absolute_dir / unique_name
     file_storage.save(absolute_path)
     return (relative_dir / unique_name).as_posix()
+
+
+def generate_coleta_token(length: int = 32) -> str:
+    """Generate a URL-safe random token for public stock collection links."""
+    return secrets.token_urlsafe(length)[:length]

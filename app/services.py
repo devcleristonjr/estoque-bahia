@@ -170,7 +170,15 @@ def build_map_points(filters: dict | None = None) -> list[dict]:
     return points
 
 
-def update_stock(point: PontoEstoque, material: Material, tipo: str, quantidade: Decimal, usuario, observacao: str | None = None) -> MovimentacaoEstoque:
+def update_stock(
+    point: PontoEstoque,
+    material: Material,
+    tipo: str,
+    quantidade: Decimal,
+    usuario=None,
+    observacao: str | None = None,
+    origem: str = "PAINEL",
+) -> MovimentacaoEstoque:
     stock = EstoqueMaterial.query.filter_by(ponto_estoque_id=point.id, material_id=material.id).first()
     if stock is None:
         stock = EstoqueMaterial(ponto_estoque=point, material=material, quantidade=Decimal("0"))
@@ -199,6 +207,7 @@ def update_stock(point: PontoEstoque, material: Material, tipo: str, quantidade:
         quantidade_anterior=quantidade_anterior,
         quantidade_posterior=quantidade_posterior,
         observacao=observacao,
+        origem=origem,
         usuario=usuario,
     )
     db.session.add(movimento)

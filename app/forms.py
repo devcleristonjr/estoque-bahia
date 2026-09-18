@@ -3,8 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
-from wtforms import BooleanField, DecimalField, PasswordField, SelectField, StringField, TextAreaField
+from flask_wtf.file import FileAllowed, FileField
+from wtforms import BooleanField, DecimalField, HiddenField, PasswordField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
 
 
@@ -58,7 +58,13 @@ class PontoEstoqueForm(FlaskForm):
     responsavel_nome = StringField("Nome do responsável", validators=[Optional(), Length(max=180)])
     responsavel_telefone = StringField("Telefone", validators=[Optional(), Length(max=30)])
     responsavel_whatsapp = StringField("WhatsApp", validators=[Optional(), Length(max=30)])
-    foto = FileField("Foto do local")
+    foto = FileField(
+        "Foto do local",
+        validators=[
+            Optional(),
+            FileAllowed(["jpg", "jpeg", "png", "webp"], "Formato de imagem invalido. Use JPG, JPEG, PNG ou WEBP."),
+        ],
+    )
     observacoes = TextAreaField("Observações", validators=[Optional(), Length(max=4000)])
     ativo = BooleanField("Ativo", default=True)
 
@@ -77,3 +83,18 @@ class EstoqueMovimentacaoForm(FlaskForm):
         validators=[DataRequired(), NumberRange(min=Decimal("0.01"))],
     )
     observacao = TextAreaField("Observação", validators=[Optional(), Length(max=4000)])
+
+
+class ColetaEstoqueForm(FlaskForm):
+    step = HiddenField(default="input")
+    foto_path = HiddenField(validators=[Optional()])
+    observacoes = TextAreaField("Observações", validators=[Optional(), Length(max=4000)])
+    latitude = HiddenField(validators=[Optional()])
+    longitude = HiddenField(validators=[Optional()])
+    foto = FileField(
+        "Foto do estoque",
+        validators=[
+            Optional(),
+            FileAllowed(["jpg", "jpeg", "png", "webp"], "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."),
+        ],
+    )

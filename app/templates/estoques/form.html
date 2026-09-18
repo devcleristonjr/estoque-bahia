@@ -53,7 +53,8 @@
             </div>
             <div class="col-md-12">
               {{ form.foto.label(class_='form-label') }}
-              {{ form.foto(class_='form-control') }}
+              {{ form.foto(class_='form-control', accept='.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp') }}
+              {% for error in form.foto.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
               <div class="form-text">JPG, JPEG, PNG e WEBP, com nome seguro e tamanho limitado pelo sistema.</div>
             </div>
             <div class="col-md-12">

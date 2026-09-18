@@ -15,7 +15,8 @@ class MovimentacaoEstoque(TimestampMixin, db.Model):
     quantidade_anterior = db.Column(db.Numeric(14, 2), nullable=False)
     quantidade_posterior = db.Column(db.Numeric(14, 2), nullable=False)
     observacao = db.Column(db.Text, nullable=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False, index=True)
+    origem = db.Column(db.String(30), nullable=False, default="PAINEL", index=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True, index=True)
 
     ponto_estoque = db.relationship("PontoEstoque", back_populates="movimentacoes", lazy="selectin")
     material = db.relationship("Material", back_populates="movimentacoes", lazy="selectin")

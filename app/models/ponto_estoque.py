@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.extensions import db
 from app.models.base import TimestampMixin
+from app.utils import generate_coleta_token
 
 
 class PontoEstoque(TimestampMixin, db.Model):
@@ -16,6 +17,7 @@ class PontoEstoque(TimestampMixin, db.Model):
     responsavel_nome = db.Column(db.String(180), nullable=True)
     responsavel_telefone = db.Column(db.String(30), nullable=True)
     responsavel_whatsapp = db.Column(db.String(30), nullable=True)
+    coleta_token = db.Column(db.String(64), nullable=False, unique=True, index=True, default=generate_coleta_token)
     foto = db.Column(db.String(255), nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
@@ -29,6 +31,12 @@ class PontoEstoque(TimestampMixin, db.Model):
     )
     movimentacoes = db.relationship(
         "MovimentacaoEstoque",
+        back_populates="ponto_estoque",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    coletas = db.relationship(
+        "ColetaRegistro",
         back_populates="ponto_estoque",
         cascade="all, delete-orphan",
         lazy="selectin",

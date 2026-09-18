@@ -59,7 +59,11 @@ def create():
         foto_path = None
         foto_file = form.foto.data
         if foto_file and hasattr(foto_file, "filename") and foto_file.filename:
-            foto_path = save_uploaded_image(foto_file)
+            try:
+                foto_path = save_uploaded_image(foto_file)
+            except ValueError as exc:
+                flash(str(exc), "danger")
+                return render_template("estoques/form.html", form=form, municipios=municipios, title="Novo ponto de estoque")
 
         ponto = PontoEstoque(
             nome=form.nome.data.strip(),
@@ -130,7 +134,11 @@ def edit(ponto_id: int):
         ponto.ativo = form.ativo.data
         foto_file = form.foto.data
         if foto_file and hasattr(foto_file, "filename") and foto_file.filename:
-            ponto.foto = save_uploaded_image(foto_file)
+            try:
+                ponto.foto = save_uploaded_image(foto_file)
+            except ValueError as exc:
+                flash(str(exc), "danger")
+                return render_template("estoques/form.html", form=form, municipios=municipios, title="Editar ponto de estoque")
         db.session.commit()
         flash("Ponto atualizado.", "success")
         return redirect(url_for(ESTOQUES_DETAIL_ENDPOINT, ponto_id=ponto.id))
