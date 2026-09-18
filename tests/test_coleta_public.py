@@ -92,6 +92,159 @@ def test_coleta_public_abre_sem_login():
     assert "Cadastro e Atualização de Estoque" in response.get_data(as_text=True)
 
 
+def test_cadastro_novo_ponto_sem_gps_funciona():
+    app = _build_public_app()
+    with app.app_context():
+        municipio_id = Municipio.query.filter_by(nome="Feira de Santana Teste").first().id
+
+    client = app.test_client()
+    data = {
+        "nome_local": "Ponto sem GPS",
+        "municipio_id": str(municipio_id),
+        "endereco": "Rua Sem GPS, 777",
+        "responsavel_nome": "José da Silva",
+        "responsavel_whatsapp": "71999999999",
+        "coletor_nome": "Nina Coletora",
+        "observacoes": "Cadastro sem GPS",
+        "qtd_1": "12",
+        "qtd_2": "8",
+        "qtd_3": "0",
+    }
+
+    preview = client.post("/coleta/novo", data=data)
+    assert preview.status_code == 200
+    assert "CONFIRME OS DADOS" in preview.get_data(as_text=True)
+
+    confirm = client.post("/coleta/novo", data={**data, "confirm": "1", "duplicate_ack": "1"})
+    assert confirm.status_code == 200
+    assert "PONTO CADASTRADO" in confirm.get_data(as_text=True)
+
+
+def test_formulario_publico_nao_expõe_required_html_e_nao_tem_busca_redundante():
+    app = _build_public_app()
+    client = app.test_client()
+
+    response = client.get("/coleta/novo")
+    html = response.get_data(as_text=True)
+
+    assert 'name="nome_local"' in html
+    assert 'name="municipio_id"' in html
+    assert 'required' not in html
+    assert 'Pesquisar município' not in html
+
+
+def test_confirmacao_reenvia_campos_obrigatorios():
+    app = _build_public_app()
+    with app.app_context():
+        municipio_id = Municipio.query.filter_by(nome="Feira de Santana Teste").first().id
+
+    client = app.test_client()
+    preview = client.post(
+        "/coleta/novo",
+        data={
+            "nome_local": "Ponto confirmacao",
+            "municipio_id": str(municipio_id),
+            "endereco": "Rua do Confirm",
+            "responsavel_nome": "Responsavel Confirm",
+            "responsavel_whatsapp": "71999999999",
+            "coletor_nome": "Coletor Confirm",
+            "observacoes": "confirmado",
+            "latitude": "-12.250000",
+            "longitude": "-38.960000",
+            "qtd_1": "10",
+            "qtd_2": "7",
+            "qtd_3": "0",
+        },
+    )
+
+    assert preview.status_code == 200
+    html = preview.get_data(as_text=True)
+    assert "CONFIRME OS DADOS" in html
+    assert 'name="nome_local"' in html
+    assert 'name="municipio_id"' in html
+    assert 'name="responsavel_nome"' in html
+    assert 'name="responsavel_whatsapp"' in html
+    assert 'name="coletor_nome"' in html
+    assert 'name="qtd_1"' in html
+    assert 'name="qtd_2"' in html
+    assert 'name="qtd_3"' in html
+
+    confirm = client.post(
+        "/coleta/novo",
+        data={
+            "nome_local": "Ponto confirmacao",
+            "municipio_id": str(municipio_id),
+            "endereco": "Rua do Confirm",
+            "responsavel_nome": "Responsavel Confirm",
+            "responsavel_whatsapp": "71999999999",
+            "coletor_nome": "Coletor Confirm",
+            "observacoes": "confirmado",
+            "latitude": "-12.250000",
+            "longitude": "-38.960000",
+            "qtd_1": "10",
+            "qtd_2": "7",
+            "qtd_3": "0",
+            "confirm": "1",
+            "duplicate_ack": "1",
+        },
+    )
+    assert confirm.status_code == 200
+    assert "PONTO CADASTRADO" in confirm.get_data(as_text=True)
+
+
+def test_confirmacao_preserva_quantidades_no_segundo_post():
+    app = _build_public_app()
+    with app.app_context():
+        municipio_id = Municipio.query.filter_by(nome="Feira de Santana Teste").first().id
+
+    client = app.test_client()
+    preview = client.post(
+        "/coleta/novo",
+        data={
+            "nome_local": "Ponto estoque",
+            "municipio_id": str(municipio_id),
+            "endereco": "Rua das Quantidades",
+            "responsavel_nome": "Responsavel Quant",
+            "responsavel_whatsapp": "71999999999",
+            "coletor_nome": "Coletor Quant",
+            "observacoes": "estoque final",
+            "latitude": "-12.260000",
+            "longitude": "-38.970000",
+            "qtd_1": "500",
+            "qtd_2": "100",
+            "qtd_3": "25",
+        },
+    )
+
+    html = preview.get_data(as_text=True)
+    assert 'name="qtd_1" value="500"' in html
+    assert 'name="qtd_2" value="100"' in html
+    assert 'name="qtd_3" value="25"' in html
+
+    confirm = client.post(
+        "/coleta/novo",
+        data={
+            "nome_local": "Ponto estoque",
+            "municipio_id": str(municipio_id),
+            "endereco": "Rua das Quantidades",
+            "responsavel_nome": "Responsavel Quant",
+            "responsavel_whatsapp": "71999999999",
+            "coletor_nome": "Coletor Quant",
+            "observacoes": "estoque final",
+            "latitude": "-12.260000",
+            "longitude": "-38.970000",
+            "qtd_1": "500",
+            "qtd_2": "100",
+            "qtd_3": "25",
+            "confirm": "1",
+            "duplicate_ack": "1",
+        },
+    )
+
+    assert confirm.status_code == 200
+    assert "PONTO CADASTRADO" in confirm.get_data(as_text=True)
+
+
 def test_cadastro_novo_ponto_funciona():
     app = _build_public_app()
     with app.app_context():

@@ -106,12 +106,33 @@ class ColetaEstoqueForm(FlaskForm):
 
 
 class ColetaPublicCadastroForm(FlaskForm):
-    nome_local = StringField("Nome do local", validators=[DataRequired(), Length(max=180)])
-    municipio_id = SelectField("Município", coerce=int, validators=[DataRequired()])
+    nome_local = StringField(
+        "Nome do local",
+        validators=[DataRequired(), Length(max=180)],
+        render_kw={"required": False},
+    )
+    municipio_id = SelectField(
+        "Município",
+        coerce=int,
+        validators=[DataRequired()],
+        render_kw={"required": False},
+    )
     endereco = StringField("Endereço", validators=[Optional(), Length(max=255)])
-    responsavel_nome = StringField("Nome do responsável", validators=[DataRequired(), Length(max=180)])
-    responsavel_whatsapp = StringField("WhatsApp", validators=[DataRequired(), Length(max=30)])
-    coletor_nome = StringField("Nome de quem está enviando o formulário", validators=[DataRequired(), Length(max=180)])
+    responsavel_nome = StringField(
+        "Nome do responsável",
+        validators=[DataRequired(), Length(max=180)],
+        render_kw={"required": False},
+    )
+    responsavel_whatsapp = StringField(
+        "WhatsApp",
+        validators=[DataRequired(), Length(max=30)],
+        render_kw={"required": False},
+    )
+    coletor_nome = StringField(
+        "Nome de quem está enviando o formulário",
+        validators=[DataRequired(), Length(max=180)],
+        render_kw={"required": False},
+    )
     observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
     latitude = HiddenField(validators=[Optional()])
     longitude = HiddenField(validators=[Optional()])
@@ -126,7 +147,11 @@ class ColetaPublicCadastroForm(FlaskForm):
 
 
 class ColetaPublicAtualizacaoForm(FlaskForm):
-    coletor_nome = StringField("Nome de quem está realizando esta atualização", validators=[DataRequired(), Length(max=180)])
+    coletor_nome = StringField(
+        "Nome de quem está realizando esta atualização",
+        validators=[DataRequired(), Length(max=180)],
+        render_kw={"required": False},
+    )
     observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
     latitude = HiddenField(validators=[Optional()])
     longitude = HiddenField(validators=[Optional()])

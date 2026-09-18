@@ -18,7 +18,23 @@
   <form method="post" enctype="multipart/form-data" novalidate>
     {{ form.hidden_tag() }}
     {% if preview %}<input type="hidden" name="confirm" value="1">{% endif %}
-    {% if foto_path %}<input type="hidden" name="foto_path" value="{{ foto_path }}">{% endif %}
+    {% if preview %}
+      <input type="hidden" name="nome_local" value="{{ form.nome_local.data or '' }}">
+      <input type="hidden" name="municipio_id" value="{{ form.municipio_id.data or '' }}">
+      <input type="hidden" name="endereco" value="{{ form.endereco.data or '' }}">
+      <input type="hidden" name="responsavel_nome" value="{{ form.responsavel_nome.data or '' }}">
+      <input type="hidden" name="responsavel_whatsapp" value="{{ form.responsavel_whatsapp.data or '' }}">
+      <input type="hidden" name="coletor_nome" value="{{ form.coletor_nome.data or '' }}">
+      <input type="hidden" name="observacoes" value="{{ form.observacoes.data or '' }}">
+      <input type="hidden" name="latitude" value="{{ form.latitude.data or '' }}">
+      <input type="hidden" name="longitude" value="{{ form.longitude.data or '' }}">
+      {% for row in quantities %}
+        <input type="hidden" name="qtd_{{ row.material.id }}" value="{{ row.new_quantity }}">
+      {% endfor %}
+      <input type="hidden" name="foto_path" value="{{ foto_path or form.foto_path.data or '' }}">
+    {% elif foto_path %}
+      <input type="hidden" name="foto_path" value="{{ foto_path }}">
+    {% endif %}
 
     {% if preview %}
       <section class="mb-4">
@@ -81,11 +97,6 @@
           {{ form.nome_local.label(class_='form-label') }}
           {{ form.nome_local(class_='form-control form-control-lg', placeholder='Nome do local') }}
           {% for error in form.nome_local.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-        </div>
-
-        <div class="mb-3">
-          <label for="municipio-search" class="form-label">Pesquisar município</label>
-          <input id="municipio-search" class="form-control form-control-lg" type="search" data-select-filter="municipio-select" placeholder="Digite para filtrar a lista">
         </div>
 
         <div class="mb-3">
