@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, render_template
 from openpyxl import load_workbook
+import sqlalchemy as sa
 
 from app.extensions import csrf, db, login_manager, migrate
 from app.models.municipio import Municipio
@@ -13,6 +14,7 @@ from app.models.usuario import Usuario
 from app.routes.administracao import municipios_bp, territorios_bp, usuarios_bp
 from app.routes.api import api_bp
 from app.routes.coleta import coleta_bp
+from app.routes.coleta_public import coleta_public_bp
 from app.routes.auth import auth_bp
 from app.routes.dashboard import dashboard_bp
 from app.routes.estoques import estoques_bp
@@ -78,6 +80,24 @@ def _ensure_reference_municipal_data() -> None:
     db.session.commit()
 
 
+def _ensure_public_coleta_schema() -> None:
+    connection = db.engine.connect()
+    try:
+        inspector = sa.inspect(connection)
+        table_names = set(inspector.get_table_names())
+        if "coletas_registro" not in table_names:
+            return
+
+        coleta_columns = {column["name"] for column in inspector.get_columns("coletas_registro")}
+        if "coletor_nome" in coleta_columns:
+            return
+
+        connection.execute(sa.text("ALTER TABLE coletas_registro ADD COLUMN coletor_nome VARCHAR(180)"))
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def create_app(config_object: type | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object or get_config())
@@ -99,6 +119,7 @@ def create_app(config_object: type | None = None) -> Flask:
     with app.app_context():
         db.create_all()
         _ensure_reference_municipal_data()
+        _ensure_public_coleta_schema()
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para continuar."
@@ -108,6 +129,7 @@ def create_app(config_object: type | None = None) -> Flask:
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(estoques_bp)
     app.register_blueprint(coleta_bp)
+    app.register_blueprint(coleta_public_bp)
     app.register_blueprint(materiais_bp)
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(territorios_bp)

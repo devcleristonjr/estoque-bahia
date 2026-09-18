@@ -26,7 +26,7 @@
               <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('usuarios.edit', usuario_id=usuario.id) }}">Editar</a>
               {% if usuario.id != current_user.id %}
                 <form method="post" action="{{ url_for('usuarios.deactivate', usuario_id=usuario.id) }}" onsubmit="return confirm('Desativar este usuário?');">
-                  {{ csrf_token() }}
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-outline-danger" type="submit">Desativar</button>
                 </form>
               {% endif %}

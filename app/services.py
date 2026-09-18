@@ -119,6 +119,8 @@ def get_dashboard_metrics(filters: dict | None = None) -> dict:
 
 def build_map_points(filters: dict | None = None) -> list[dict]:
     filters = filters or {}
+    material_id = filters.get("material_id")
+    selected_material = db.session.get(Material, material_id) if material_id else None
     query = (
         db.session.query(PontoEstoque)
         .join(PontoEstoque.municipio)
@@ -126,31 +128,41 @@ def build_map_points(filters: dict | None = None) -> list[dict]:
         .filter(PontoEstoque.latitude.isnot(None), PontoEstoque.longitude.isnot(None))
     )
     query = _apply_point_filters(query, filters)
-    if material_id := filters.get("material_id"):
+    if material_id:
         query = query.join(PontoEstoque.estoques).filter(EstoqueMaterial.material_id == material_id)
 
     points = []
     for point in query.order_by(PontoEstoque.nome.asc()).all():
-        if filters.get("material_id"):
-            banner_total = (
+        total_stock = (
+            db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0))
+            .select_from(EstoqueMaterial)
+            .filter(EstoqueMaterial.ponto_estoque_id == point.id)
+            .scalar()
+            or Decimal("0")
+        )
+        material_summary = (
+            db.session.query(Material.nome, EstoqueMaterial.quantidade)
+            .select_from(EstoqueMaterial)
+            .join(EstoqueMaterial.material)
+            .filter(EstoqueMaterial.ponto_estoque_id == point.id)
+            .order_by(EstoqueMaterial.quantidade.desc(), Material.nome.asc())
+            .all()
+        )
+
+        if material_id:
+            metric_total = (
                 db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0))
                 .select_from(EstoqueMaterial)
                 .filter(
-                    EstoqueMaterial.ponto_estoque_id == point.id,
-                    EstoqueMaterial.material_id == filters["material_id"],
+                    EstoqueMaterial.ponto_estoque_id == point.id, EstoqueMaterial.material_id == material_id
                 )
                 .scalar()
                 or Decimal("0")
             )
+            metric_label = selected_material.nome if selected_material is not None else "Material selecionado"
         else:
-            banner_total = (
-                db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0))
-                .select_from(EstoqueMaterial)
-                .join(EstoqueMaterial.material)
-                .filter(EstoqueMaterial.ponto_estoque_id == point.id, Material.nome.ilike("%banner%"))
-                .scalar()
-                or Decimal("0")
-            )
+            metric_total = total_stock
+            metric_label = "Estoque total"
         points.append(
             {
                 "id": point.id,
@@ -163,7 +175,18 @@ def build_map_points(filters: dict | None = None) -> list[dict]:
                 "responsavel_whatsapp": point.responsavel_whatsapp,
                 "whatsapp_url": build_whatsapp_url(point.responsavel_whatsapp or point.responsavel_telefone),
                 "foto": point.foto,
-                "total_banners": float(banner_total),
+                "total_estoque": float(total_stock),
+                "materiais_resumo": [
+                    {
+                        "nome": material_name,
+                        "quantidade": float(material_quantity),
+                    }
+                    for material_name, material_quantity in material_summary
+                ],
+                "metric_label": metric_label,
+                "metric_value": float(metric_total),
+                # Backward compatible key used by existing frontend snippets.
+                "total_banners": float(metric_total),
                 "detail_url": f"/estoques/{point.id}",
             }
         )

@@ -8,6 +8,11 @@ from wtforms import BooleanField, DecimalField, HiddenField, PasswordField, Sele
 from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
 
 
+PUBLIC_IMAGE_FIELD_LABEL = "Foto do local"
+PUBLIC_OBSERVACOES_LABEL = "Observ" + "ações"
+PUBLIC_IMAGE_VALIDATION_MESSAGE = "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."
+
+
 class UsuarioForm(FlaskForm):
     nome = StringField("Nome", validators=[DataRequired(), Length(max=120)])
     email = StringField("E-mail", validators=[DataRequired(), Email(), Length(max=180)])
@@ -65,7 +70,7 @@ class PontoEstoqueForm(FlaskForm):
             FileAllowed(["jpg", "jpeg", "png", "webp"], "Formato de imagem invalido. Use JPG, JPEG, PNG ou WEBP."),
         ],
     )
-    observacoes = TextAreaField("Observações", validators=[Optional(), Length(max=4000)])
+    observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
     ativo = BooleanField("Ativo", default=True)
 
 
@@ -88,7 +93,7 @@ class EstoqueMovimentacaoForm(FlaskForm):
 class ColetaEstoqueForm(FlaskForm):
     step = HiddenField(default="input")
     foto_path = HiddenField(validators=[Optional()])
-    observacoes = TextAreaField("Observações", validators=[Optional(), Length(max=4000)])
+    observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
     latitude = HiddenField(validators=[Optional()])
     longitude = HiddenField(validators=[Optional()])
     foto = FileField(
@@ -96,5 +101,40 @@ class ColetaEstoqueForm(FlaskForm):
         validators=[
             Optional(),
             FileAllowed(["jpg", "jpeg", "png", "webp"], "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."),
+        ],
+    )
+
+
+class ColetaPublicCadastroForm(FlaskForm):
+    nome_local = StringField("Nome do local", validators=[DataRequired(), Length(max=180)])
+    municipio_id = SelectField("Município", coerce=int, validators=[DataRequired()])
+    endereco = StringField("Endereço", validators=[Optional(), Length(max=255)])
+    responsavel_nome = StringField("Nome do responsável", validators=[DataRequired(), Length(max=180)])
+    responsavel_whatsapp = StringField("WhatsApp", validators=[DataRequired(), Length(max=30)])
+    coletor_nome = StringField("Nome de quem está enviando o formulário", validators=[DataRequired(), Length(max=180)])
+    observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
+    latitude = HiddenField(validators=[Optional()])
+    longitude = HiddenField(validators=[Optional()])
+    foto_path = HiddenField(validators=[Optional()])
+    foto = FileField(
+        PUBLIC_IMAGE_FIELD_LABEL,
+        validators=[
+            Optional(),
+            FileAllowed(["jpg", "jpeg", "png", "webp"], PUBLIC_IMAGE_VALIDATION_MESSAGE),
+        ],
+    )
+
+
+class ColetaPublicAtualizacaoForm(FlaskForm):
+    coletor_nome = StringField("Nome de quem está realizando esta atualização", validators=[DataRequired(), Length(max=180)])
+    observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
+    latitude = HiddenField(validators=[Optional()])
+    longitude = HiddenField(validators=[Optional()])
+    foto_path = HiddenField(validators=[Optional()])
+    foto = FileField(
+        PUBLIC_IMAGE_FIELD_LABEL,
+        validators=[
+            Optional(),
+            FileAllowed(["jpg", "jpeg", "png", "webp"], PUBLIC_IMAGE_VALIDATION_MESSAGE),
         ],
     )

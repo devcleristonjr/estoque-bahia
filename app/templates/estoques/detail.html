@@ -10,6 +10,12 @@
     <a class="btn btn-outline-primary" href="{{ url_for('estoques.edit', ponto_id=ponto.id) }}">Editar ponto</a>
     <a class="btn btn-primary" href="{{ url_for('estoques.update_stock_view', ponto_id=ponto.id) }}">Atualizar estoque</a>
     <a class="btn btn-outline-dark" href="{{ url_for('estoques.history', ponto_id=ponto.id) }}">Ver histórico</a>
+    {% if current_user.is_admin %}
+      <form method="post" action="{{ url_for('estoques.delete', ponto_id=ponto.id) }}" onsubmit="return confirm('Excluir este ponto permanentemente? Esta ação também remove histórico, coletas e estoques vinculados.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-danger" type="submit">Excluir ponto</button>
+      </form>
+    {% endif %}
     {% if whatsapp_url %}
       <a class="btn btn-success" target="_blank" rel="noopener noreferrer" href="{{ whatsapp_url }}">💬 Falar no WhatsApp</a>
     {% endif %}

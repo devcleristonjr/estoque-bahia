@@ -3,9 +3,12 @@ from __future__ import annotations
 import re
 import secrets
 import uuid
+import json
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from flask import current_app
 from werkzeug.utils import secure_filename
@@ -113,6 +116,43 @@ def parse_coordinate_pair(value: str | None, alternate: str | None = None) -> tu
         return (parse_coordinate_to_decimal(value), None)
 
     return (None, parse_coordinate_to_decimal(alternate))
+
+
+def _nominatim_search(query: str) -> tuple[Decimal | None, Decimal | None]:
+    params = urlencode({"q": query, "format": "jsonv2", "limit": 1, "countrycodes": "br"})
+    url = f"https://nominatim.openstreetmap.org/search?{params}"
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "estoque-bahia/1.0 (contato@localhost)",
+            "Accept": "application/json",
+        },
+    )
+    with urlopen(request, timeout=4) as response:
+        payload = response.read().decode("utf-8")
+    data = json.loads(payload)
+    if not data:
+        return (None, None)
+    latitude = parse_coordinate_to_decimal(data[0].get("lat"))
+    longitude = parse_coordinate_to_decimal(data[0].get("lon"))
+    return (latitude, longitude)
+
+
+def geocode_address_coordinates(endereco: str | None, municipio: str | None) -> tuple[Decimal | None, Decimal | None]:
+    if not municipio:
+        return (None, None)
+
+    try:
+        if endereco:
+            latitude, longitude = _nominatim_search(f"{endereco}, {municipio}, Bahia, Brasil")
+            if latitude is not None and longitude is not None:
+                return (latitude, longitude)
+
+        # City-level fallback keeps the point mappable even when street-level geocoding is unavailable.
+        latitude, longitude = _nominatim_search(f"{municipio}, Bahia, Brasil")
+        return (latitude, longitude)
+    except Exception:
+        return (None, None)
 
 
 def allowed_image_filename(filename: str) -> bool:

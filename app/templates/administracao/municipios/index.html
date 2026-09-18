@@ -25,7 +25,7 @@
             <td class="d-flex gap-2">
               <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('municipios.edit', municipio_id=municipio.id) }}">Editar</a>
               <form method="post" action="{{ url_for('municipios.deactivate', municipio_id=municipio.id) }}" onsubmit="return confirm('Desativar este município?');">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Desativar</button>
               </form>
             </td>

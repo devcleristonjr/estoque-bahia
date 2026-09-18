@@ -30,9 +30,15 @@
               <a class="btn btn-sm btn-outline-success" href="{{ url_for('estoques.update_stock_view', ponto_id=ponto.id) }}">Estoque</a>
               <a class="btn btn-sm btn-outline-dark" href="{{ url_for('estoques.history', ponto_id=ponto.id) }}">Histórico</a>
               <form method="post" action="{{ url_for('estoques.deactivate', ponto_id=ponto.id) }}" onsubmit="return confirm('Desativar este ponto?');">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Desativar</button>
               </form>
+              {% if current_user.is_admin %}
+                <form method="post" action="{{ url_for('estoques.delete', ponto_id=ponto.id) }}" onsubmit="return confirm('Excluir este ponto permanentemente? Esta ação também remove histórico, coletas e estoques vinculados.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-danger" type="submit">Excluir</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% else %}

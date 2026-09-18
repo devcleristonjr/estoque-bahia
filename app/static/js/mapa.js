@@ -17,7 +17,8 @@
 
   const markerLayer = L.layerGroup().addTo(map);
   const totalPontosEl = document.getElementById('map-total-pontos');
-  const totalBannersEl = document.getElementById('map-total-banners');
+  const totalMetricEl = document.getElementById('map-total-banners');
+  const totalMetricLabelEl = document.getElementById('map-total-metric-label');
 
   const filters = {
     territorio_id: document.getElementById('filter-territorio'),
@@ -29,7 +30,7 @@
   function getQueryString() {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, element]) => {
-      if (element && element.value) {
+      if (element?.value) {
         params.set(key, element.value);
       }
     });
@@ -52,12 +53,32 @@
     const points = await response.json();
 
     markerLayer.clearLayers();
-    let totalBanners = 0;
+    let totalMetric = 0;
+    let metricLabel = 'Estoque total';
     const bounds = [];
     const duplicateCounts = new Map();
 
+    const hasMaterialFilter = Boolean(filters.material_id?.value);
+
     points.forEach((point) => {
-      totalBanners += Number(point.total_banners || 0);
+      const pointTotalStock = Number(point.total_estoque ?? 0);
+      const pointMetric = hasMaterialFilter
+        ? Number(point.metric_value ?? point.total_banners ?? 0)
+        : pointTotalStock;
+      const materialSummary = Array.isArray(point.materiais_resumo) ? point.materiais_resumo : [];
+      const visibleMaterials = materialSummary.filter((item) => Number(item.quantidade || 0) > 0).slice(0, 4);
+      const materialSummaryHtml = visibleMaterials.length > 0
+        ? `
+          <div class="mb-2">
+            <strong>Materiais:</strong>
+            <div class="small mt-1">
+              ${visibleMaterials.map((item) => `${escapeHtml(item.nome)}: ${Number(item.quantidade || 0)}`).join('<br>')}
+            </div>
+          </div>
+        `
+        : '<div class="mb-2"><strong>Materiais:</strong> <span class="text-muted">Sem estoque informado</span></div>';
+      totalMetric += pointMetric;
+      metricLabel = hasMaterialFilter ? (point.metric_label || metricLabel) : 'Estoque total';
       bounds.push([point.latitude, point.longitude]);
 
       const coordinateKey = `${point.latitude}:${point.longitude}`;
@@ -72,7 +93,9 @@
         <div class="p-1" style="min-width: 240px; max-width: 300px;">
           <div class="fw-bold mb-1">${escapeHtml(point.nome)}</div>
           <div class="small text-muted mb-2">${escapeHtml(point.municipio)} • ${escapeHtml(point.territorio)}</div>
-          <div class="mb-2"><strong>Banners:</strong> ${Number(point.total_banners || 0)}</div>
+          <div class="mb-2"><strong>Estoque total:</strong> ${pointTotalStock}</div>
+          ${hasMaterialFilter ? `<div class="mb-2"><strong>${escapeHtml(point.metric_label || 'Material selecionado')}:</strong> ${pointMetric}</div>` : ''}
+          ${materialSummaryHtml}
           <div class="mb-2"><strong>Responsável:</strong> ${escapeHtml(point.responsavel_nome || '-')}</div>
           ${point.foto ? `<div class="mb-2"><img src="/${escapeHtml(point.foto)}" alt="Foto" style="width:100%;height:140px;object-fit:cover;border-radius:12px;"></div>` : ''}
           <div class="d-grid gap-2">
@@ -85,7 +108,8 @@
     });
 
     if (totalPontosEl) totalPontosEl.textContent = String(points.length);
-    if (totalBannersEl) totalBannersEl.textContent = String(Math.round(totalBanners));
+    if (totalMetricEl) totalMetricEl.textContent = String(Math.round(totalMetric));
+    if (totalMetricLabelEl) totalMetricLabelEl.textContent = metricLabel;
 
     if (bounds.length > 0) {
       map.fitBounds(bounds, { padding: [30, 30] });

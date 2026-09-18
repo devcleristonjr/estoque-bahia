@@ -14,9 +14,16 @@ from app.models.municipio import Municipio
 from app.models.movimentacao_estoque import MovimentacaoEstoque
 from app.models.ponto_estoque import PontoEstoque
 from app.models.territorio import Territorio
-from app.security import role_required
+from app.security import admin_required, role_required
 from app.services import update_stock
-from app.utils import build_whatsapp_url, save_uploaded_image, digits_only, normalize_whatsapp_number, parse_coordinate_pair
+from app.utils import (
+    build_whatsapp_url,
+    digits_only,
+    geocode_address_coordinates,
+    normalize_whatsapp_number,
+    parse_coordinate_pair,
+    save_uploaded_image,
+)
 
 
 estoques_bp = Blueprint("estoques", __name__, url_prefix="/estoques")
@@ -56,6 +63,13 @@ def create():
         lat_value, lon_value = parse_coordinate_pair(form.coordenadas.data or form.latitude.data, form.longitude.data)
         if lat_value is None and lon_value is None:
             lat_value, lon_value = parse_coordinate_pair(form.latitude.data, form.longitude.data)
+        if lat_value is None and lon_value is None:
+            lat_value, lon_value = geocode_address_coordinates(
+                endereco=form.endereco.data.strip() if form.endereco.data else None,
+                municipio=municipio.nome,
+            )
+            if lat_value is not None and lon_value is not None:
+                flash("Coordenadas estimadas automaticamente pelo endereço informado.", "info")
         foto_path = None
         foto_file = form.foto.data
         if foto_file and hasattr(foto_file, "filename") and foto_file.filename:
@@ -122,6 +136,13 @@ def edit(ponto_id: int):
                 lat_value, lon_value = parse_coordinate_pair(form.latitude.data, form.longitude.data)
         else:
             lat_value, lon_value = parse_coordinate_pair(form.latitude.data, form.longitude.data)
+        if lat_value is None and lon_value is None:
+            lat_value, lon_value = geocode_address_coordinates(
+                endereco=form.endereco.data.strip() if form.endereco.data else None,
+                municipio=municipio.nome,
+            )
+            if lat_value is not None and lon_value is not None:
+                flash("Coordenadas estimadas automaticamente pelo endereço informado.", "info")
         ponto.nome = form.nome.data.strip()
         ponto.municipio = municipio
         ponto.endereco = form.endereco.data.strip() if form.endereco.data else None
@@ -153,6 +174,17 @@ def deactivate(ponto_id: int):
     ponto.ativo = False
     db.session.commit()
     flash("Ponto desativado.", "info")
+    return redirect(url_for(ESTOQUES_INDEX_ENDPOINT))
+
+
+@estoques_bp.route("/<int:ponto_id>/excluir", methods=["POST"])
+@login_required
+@admin_required
+def delete(ponto_id: int):
+    ponto = PontoEstoque.query.get_or_404(ponto_id)
+    db.session.delete(ponto)
+    db.session.commit()
+    flash("Ponto excluído permanentemente.", "warning")
     return redirect(url_for(ESTOQUES_INDEX_ENDPOINT))
 
 

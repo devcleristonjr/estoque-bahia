@@ -24,7 +24,7 @@
             <td class="d-flex gap-2">
               <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('territorios.edit', territorio_id=territorio.id) }}">Editar</a>
               <form method="post" action="{{ url_for('territorios.deactivate', territorio_id=territorio.id) }}" onsubmit="return confirm('Desativar este território?');">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Desativar</button>
               </form>
             </td>
