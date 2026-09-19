@@ -133,14 +133,14 @@
             if (!navigator.geolocation) {
               if (statusEl) {
                 statusEl.className = "text-warning small fw-semibold mt-2";
-                statusEl.textContent = "Geolocalização não suportada neste navegador.";
+                statusEl.textContent = "Geolocalização não suportada neste navegador. Você pode continuar sem informar localização atual.";
               }
               return;
             }
 
             if (statusEl) {
               statusEl.className = "text-warning small fw-semibold mt-2";
-              statusEl.textContent = "Obtendo localização...";
+              statusEl.textContent = "Obtendo sua localização atual...";
             }
 
             navigator.geolocation.getCurrentPosition(
@@ -149,13 +149,13 @@
                 if (lonInput) lonInput.value = position.coords.longitude.toFixed(6);
                 if (statusEl) {
                   statusEl.className = "text-success small fw-semibold mt-2";
-                  statusEl.textContent = "✅ Localização registrada";
+                  statusEl.textContent = "✅ Localização atual registrada no mapa";
                 }
               },
               function () {
                 if (statusEl) {
                   statusEl.className = "text-muted small fw-semibold mt-2";
-                  statusEl.textContent = "Localização não informada";
+                  statusEl.textContent = "Localização atual não informada (opcional)";
                 }
               },
               { enableHighAccuracy: true, timeout: 10000 }

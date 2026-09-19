@@ -44,7 +44,14 @@ def _build_public_app():
         db.session.add_all(materiais)
         db.session.flush()
 
-        ponto = PontoEstoque(nome="Comite Wet Eventos", municipio_id=municipio_b.id, ativo=True)
+        ponto = PontoEstoque(
+            nome="Comite Wet Eventos",
+            municipio_id=municipio_b.id,
+            endereco="Rua Original, 10",
+            latitude=Decimal("-12.971111"),
+            longitude=Decimal("-38.510833"),
+            ativo=True,
+        )
         ponto_duplicado = PontoEstoque(nome="Comite Wet Evento", municipio_id=municipio_b.id, ativo=True)
         db.session.add_all([ponto, ponto_duplicado])
         db.session.flush()
@@ -130,6 +137,19 @@ def test_formulario_publico_nao_expõe_required_html_e_nao_tem_busca_redundante(
     assert 'name="nome_local"' in html
     assert 'name="municipio_id"' in html
     assert 'required' not in html
+    assert 'Pesquisar município' not in html
+
+
+def test_atualizar_busca_nao_exibe_pesquisa_redundante_de_municipio():
+    app = _build_public_app()
+    client = app.test_client()
+
+    response = client.get("/coleta/atualizar")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="municipio-select"' in html
+    assert 'id="municipio-search"' not in html
     assert 'Pesquisar município' not in html
 
 
@@ -396,23 +416,24 @@ def test_atualizacao_ponto_funciona():
         data={
             "coletor_nome": "Maria Santos",
             "observacoes": "ajuste geral",
-            "latitude": "-12.971111",
-            "longitude": "-38.510833",
             "qtd_1": "450",
             "qtd_2": "100",
             "qtd_3": "50",
         },
     )
     assert preview.status_code == 200
-    assert "CONFIRME OS DADOS" in preview.get_data(as_text=True)
+    html = preview.get_data(as_text=True)
+    assert "CONFIRME OS DADOS" in html
+    assert 'name="coletor_nome" value="Maria Santos"' in html
+    assert 'name="qtd_1" value="450"' in html
+    assert 'name="qtd_2" value="100"' in html
+    assert 'name="qtd_3" value="50"' in html
 
     confirm = client.post(
         f"/coleta/atualizar/{ponto_id}?municipio_id={municipio_id}",
         data={
             "coletor_nome": "Maria Santos",
             "observacoes": "ajuste geral",
-            "latitude": "-12.971111",
-            "longitude": "-38.510833",
             "qtd_1": "450",
             "qtd_2": "100",
             "qtd_3": "50",
@@ -444,8 +465,6 @@ def test_diferenca_de_estoque_gera_saida_e_entrada():
         data={
             "coletor_nome": "Maria Santos",
             "observacoes": "ajuste",
-            "latitude": "",
-            "longitude": "",
             "qtd_1": "450",
             "qtd_2": "130",
             "qtd_3": "50",
@@ -456,8 +475,6 @@ def test_diferenca_de_estoque_gera_saida_e_entrada():
         data={
             "coletor_nome": "Maria Santos",
             "observacoes": "ajuste",
-            "latitude": "",
-            "longitude": "",
             "qtd_1": "450",
             "qtd_2": "130",
             "qtd_3": "50",
@@ -487,6 +504,75 @@ def test_gps_e_coletor_sao_salvos():
         assert registro.coletor_nome == "Maria Santos"
         assert Decimal(registro.latitude) == Decimal("-12.255000")
         assert Decimal(registro.longitude) == Decimal("-38.965000")
+
+
+def test_atualizacao_nao_exibe_opcao_de_localizacao():
+    app = _build_public_app()
+    with app.app_context():
+        ponto = PontoEstoque.query.filter_by(nome="Comite Wet Eventos").first()
+        ponto_id = ponto.id
+        municipio_id = ponto.municipio_id
+
+    client = app.test_client()
+    response = client.get(f"/coleta/atualizar/{ponto_id}?municipio_id={municipio_id}")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Usar minha localização atual" not in html
+    assert "Registrar minha localização" not in html
+    assert 'id="btn-localizacao"' not in html
+    assert 'type="hidden" name="latitude"' not in html
+    assert 'type="hidden" name="longitude"' not in html
+
+
+def test_atualizacao_nao_altera_localizacao_endereco_ou_municipio():
+    app = _build_public_app()
+    with app.app_context():
+        ponto = PontoEstoque.query.filter_by(nome="Comite Wet Eventos").first()
+        ponto_id = ponto.id
+        municipio_id = ponto.municipio_id
+        endereco_original = ponto.endereco
+        latitude_original = Decimal(ponto.latitude)
+        longitude_original = Decimal(ponto.longitude)
+
+    client = app.test_client()
+    preview = client.post(
+        f"/coleta/atualizar/{ponto_id}?municipio_id={municipio_id}",
+        data={
+            "coletor_nome": "Maria Santos",
+            "observacoes": "ajuste sem alterar cadastro",
+            "qtd_1": "470",
+            "qtd_2": "120",
+            "qtd_3": "50",
+        },
+    )
+    assert preview.status_code == 200
+
+    confirm = client.post(
+        f"/coleta/atualizar/{ponto_id}?municipio_id={municipio_id}",
+        data={
+            "coletor_nome": "Maria Santos",
+            "observacoes": "ajuste sem alterar cadastro",
+            "qtd_1": "470",
+            "qtd_2": "120",
+            "qtd_3": "50",
+            "confirm": "1",
+        },
+    )
+    assert confirm.status_code == 200
+
+    with app.app_context():
+        ponto_atualizado = db.session.get(PontoEstoque, ponto_id)
+        assert ponto_atualizado is not None
+        assert ponto_atualizado.endereco == endereco_original
+        assert Decimal(ponto_atualizado.latitude) == latitude_original
+        assert Decimal(ponto_atualizado.longitude) == longitude_original
+        assert ponto_atualizado.municipio_id == municipio_id
+
+        registro = ColetaRegistro.query.filter_by(ponto_estoque_id=ponto_id).order_by(ColetaRegistro.id.desc()).first()
+        assert registro is not None
+        assert registro.latitude is None
+        assert registro.longitude is None
 
 
 def test_foto_e_salva_no_arquivo():

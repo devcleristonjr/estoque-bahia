@@ -385,7 +385,6 @@ def atualizar_form(ponto_id: int):  # NOSONAR
             municipio=ponto.municipio,
             materiais=current_rows,
             preview=False,
-            location_registered=False,
         )
 
     if not form.validate_on_submit():
@@ -396,11 +395,8 @@ def atualizar_form(ponto_id: int):  # NOSONAR
             municipio=ponto.municipio,
             materiais=current_rows,
             preview=False,
-            location_registered=bool(form.latitude.data and form.longitude.data),
         )
 
-    latitude = parse_coordinate_to_decimal(form.latitude.data)
-    longitude = parse_coordinate_to_decimal(form.longitude.data)
     quantities, errors = _build_quantities_from_form(request.form, materiais, current_map=current_map)
     if errors:
         for message in errors:
@@ -412,7 +408,6 @@ def atualizar_form(ponto_id: int):  # NOSONAR
             municipio=ponto.municipio,
             materiais=current_rows,
             preview=False,
-            location_registered=latitude is not None and longitude is not None,
         )
 
     foto_path = form.foto_path.data or None
@@ -429,7 +424,6 @@ def atualizar_form(ponto_id: int):  # NOSONAR
                 municipio=ponto.municipio,
                 materiais=current_rows,
                 preview=False,
-                location_registered=latitude is not None and longitude is not None,
             )
 
     preview_rows = []
@@ -454,7 +448,6 @@ def atualizar_form(ponto_id: int):  # NOSONAR
             materiais=current_rows,
             preview=True,
             quantity_rows=preview_rows,
-            location_registered=latitude is not None and longitude is not None,
             has_photo=bool(foto_path),
             foto_path=foto_path,
         )
@@ -468,8 +461,6 @@ def atualizar_form(ponto_id: int):  # NOSONAR
         ponto_estoque=ponto,
         coletor_nome=form.coletor_nome.data.strip(),
         foto=foto_path,
-        latitude=latitude,
-        longitude=longitude,
         observacoes=form.observacoes.data.strip() if form.observacoes.data else None,
         origem="COLETA_WEB",
     )
@@ -486,5 +477,5 @@ def atualizar_form(ponto_id: int):  # NOSONAR
         coletor_nome=form.coletor_nome.data.strip(),
         operation="atualizar",
         foto_path=foto_path,
-        location_registered=latitude is not None and longitude is not None,
+        location_registered=False,
     )

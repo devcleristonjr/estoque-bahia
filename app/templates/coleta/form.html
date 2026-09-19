@@ -128,12 +128,13 @@
                 </div>
 
                 <div class="mb-3">
-                  <button type="button" id="btn-localizacao" class="btn btn-outline-primary w-100">📍 Registrar minha localização</button>
+                  <button type="button" id="btn-localizacao" class="btn btn-outline-primary w-100">📍 Usar minha localização atual</button>
+                  <div class="form-text mt-2">A localização atual do dispositivo será usada para posicionar este ponto no mapa. O endereço do ponto não será alterado.</div>
                   <div id="status-localizacao" class="small mt-2 {% if location_registered %}status-ok{% else %}status-warn{% endif %}">
                     {% if location_registered %}
-                      Localização registrada com sucesso.
+                      Localização atual registrada no mapa.
                     {% else %}
-                      Localização não registrada.
+                      Localização atual não informada (opcional).
                     {% endif %}
                   </div>
                 </div>
@@ -165,23 +166,23 @@
         btn.addEventListener("click", function () {
           if (!navigator.geolocation) {
             statusEl.className = "small mt-2 status-warn";
-            statusEl.textContent = "Geolocalização não suportada neste navegador.";
+            statusEl.textContent = "Geolocalização não suportada neste navegador. Você pode continuar sem informar localização atual.";
             return;
           }
 
           statusEl.className = "small mt-2 status-warn";
-          statusEl.textContent = "Obtendo localização...";
+          statusEl.textContent = "Obtendo sua localização atual...";
 
           navigator.geolocation.getCurrentPosition(
             function (position) {
               latInput.value = position.coords.latitude.toFixed(6);
               lonInput.value = position.coords.longitude.toFixed(6);
               statusEl.className = "small mt-2 status-ok";
-              statusEl.textContent = "Localização registrada com sucesso.";
+              statusEl.textContent = "Localização atual registrada no mapa.";
             },
             function () {
               statusEl.className = "small mt-2 status-warn";
-              statusEl.textContent = "Permissão negada ou localização indisponível. Você pode continuar sem localização.";
+              statusEl.textContent = "Permissão negada ou localização indisponível. Você pode continuar sem informar localização atual.";
             },
             { enableHighAccuracy: true, timeout: 10000 }
           );

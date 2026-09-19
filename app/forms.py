@@ -153,8 +153,6 @@ class ColetaPublicAtualizacaoForm(FlaskForm):
         render_kw={"required": False},
     )
     observacoes = TextAreaField(PUBLIC_OBSERVACOES_LABEL, validators=[Optional(), Length(max=4000)])
-    latitude = HiddenField(validators=[Optional()])
-    longitude = HiddenField(validators=[Optional()])
     foto_path = HiddenField(validators=[Optional()])
     foto = FileField(
         PUBLIC_IMAGE_FIELD_LABEL,

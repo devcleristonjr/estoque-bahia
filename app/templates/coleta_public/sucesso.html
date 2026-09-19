@@ -11,7 +11,11 @@
     <div class="material-row"><span class="soft-label d-block">Responsável</span><strong>{{ ponto.responsavel_nome or '-' }}</strong></div>
     <div class="material-row"><span class="soft-label d-block">Cadastro realizado por</span><strong>{{ coletor_nome }}</strong></div>
     <div class="material-row"><span class="soft-label d-block">Foto</span><strong>{{ '✅ Adicionada' if foto_path else 'Não adicionada' }}</strong></div>
-    <div class="material-row"><span class="soft-label d-block">Localização</span><strong>{{ '✅ Registrada' if location_registered else 'Localização não informada' }}</strong></div>
+    {% if operation == 'novo' %}
+      <div class="material-row"><span class="soft-label d-block">Localização atual no mapa</span><strong>{{ '✅ Registrada' if location_registered else 'Não informada (opcional)' }}</strong></div>
+    {% else %}
+      <div class="material-row"><span class="soft-label d-block">Localização do ponto no mapa</span><strong>Mantida sem alterações nesta atualização</strong></div>
+    {% endif %}
   </div>
 
   <div class="vstack gap-2 mb-4">

@@ -61,7 +61,7 @@
           <div class="material-row"><span class="soft-label d-block">Responsável</span><strong>{{ form.responsavel_nome.data }}</strong></div>
           <div class="material-row"><span class="soft-label d-block">WhatsApp</span><strong>{{ form.responsavel_whatsapp.data }}</strong></div>
           <div class="material-row"><span class="soft-label d-block">Cadastro realizado por</span><strong>{{ form.coletor_nome.data }}</strong></div>
-          <div class="material-row"><span class="soft-label d-block">Localização</span><strong>{{ '✅ Registrada' if location_registered else 'Localização não informada' }}</strong></div>
+          <div class="material-row"><span class="soft-label d-block">Localização atual no mapa</span><strong>{{ '✅ Registrada' if location_registered else 'Não informada (opcional)' }}</strong></div>
           <div class="material-row"><span class="soft-label d-block">Foto</span><strong>{{ '✅ Adicionada' if has_photo else 'Não adicionada' }}</strong></div>
         </div>
 
@@ -123,6 +123,7 @@
         <div class="mb-3">
           {{ form.endereco.label(class_='form-label') }}
           {{ form.endereco(class_='form-control', placeholder='Opcional') }}
+          <div class="form-text">Este é o endereço do ponto (rua, número, bairro, complemento e município).</div>
         </div>
       </section>
 
@@ -150,12 +151,14 @@
       </section>
 
       <section class="mb-4">
-        <h2 class="h5 fw-bold mb-3">📍 Localização do ponto</h2>
+        <h2 class="h5 fw-bold mb-2">📍 Localização no mapa</h2>
+        <p class="mb-2">Deseja usar sua localização atual para registrar este ponto no mapa?</p>
         <input type="hidden" name="latitude" value="{{ form.latitude.data or '' }}">
         <input type="hidden" name="longitude" value="{{ form.longitude.data or '' }}">
-        <button type="button" id="btn-localizacao" class="btn btn-outline-primary btn-lg w-100">Registrar minha localização</button>
+        <button type="button" id="btn-localizacao" class="btn btn-outline-primary btn-lg w-100">Usar minha localização atual</button>
+        <div class="form-text mt-2">Sua localização atual será usada para posicionar este ponto no mapa. O endereço informado acima continuará sendo mantido como endereço do ponto.</div>
         <div id="status-localizacao" class="small fw-semibold mt-2 {{ 'text-success' if location_registered else 'text-muted' }}">
-          {{ '✅ Localização registrada' if location_registered else 'Localização não informada' }}
+          {{ '✅ Localização atual registrada no mapa' if location_registered else 'Localização atual não informada (opcional)' }}
         </div>
       </section>
 

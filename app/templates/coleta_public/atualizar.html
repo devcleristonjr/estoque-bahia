@@ -18,7 +18,16 @@
   <form method="post" enctype="multipart/form-data" novalidate>
     {{ form.hidden_tag() }}
     {% if preview %}<input type="hidden" name="confirm" value="1">{% endif %}
-    {% if foto_path %}<input type="hidden" name="foto_path" value="{{ foto_path }}">{% endif %}
+    {% if preview %}
+      <input type="hidden" name="coletor_nome" value="{{ form.coletor_nome.data or '' }}">
+      <input type="hidden" name="observacoes" value="{{ form.observacoes.data or '' }}">
+      {% for row in quantity_rows %}
+        <input type="hidden" name="qtd_{{ row.material.id }}" value="{{ row.new_quantity }}">
+      {% endfor %}
+      <input type="hidden" name="foto_path" value="{{ foto_path or form.foto_path.data or '' }}">
+    {% elif foto_path %}
+      <input type="hidden" name="foto_path" value="{{ foto_path }}">
+    {% endif %}
 
     {% if preview %}
       <section class="mb-4">
@@ -33,7 +42,7 @@
             </div>
           {% endfor %}
           <div class="material-row"><span class="soft-label d-block">Foto</span><strong>{{ '✅ Adicionada' if has_photo else 'Não adicionada' }}</strong></div>
-          <div class="material-row"><span class="soft-label d-block">GPS</span><strong>{{ '✅ Registrado' if location_registered else 'Não informado' }}</strong></div>
+          <div class="material-row"><span class="soft-label d-block">Localização do ponto no mapa</span><strong>Mantida sem alterações nesta atualização</strong></div>
           <div class="material-row"><span class="soft-label d-block">Atualizado por</span><strong>{{ form.coletor_nome.data }}</strong></div>
         </div>
         {% if form.observacoes.data %}
@@ -68,16 +77,6 @@
         {{ form.foto(class_='form-control form-control-lg', accept='image/jpeg,image/jpg,image/png,image/webp', capture='environment') }}
         <div class="form-text">JPG, JPEG, PNG ou WEBP. Limite de 5 MB.</div>
         <input type="hidden" name="foto_path" value="{{ form.foto_path.data or '' }}">
-      </section>
-
-      <section class="mb-4">
-        <h2 class="h5 fw-bold mb-3">📍 Localização do ponto</h2>
-        <input type="hidden" name="latitude" value="{{ form.latitude.data or '' }}">
-        <input type="hidden" name="longitude" value="{{ form.longitude.data or '' }}">
-        <button type="button" id="btn-localizacao" class="btn btn-outline-primary btn-lg w-100">Registrar minha localização</button>
-        <div id="status-localizacao" class="small fw-semibold mt-2 {{ 'text-success' if location_registered else 'text-muted' }}">
-          {{ '✅ Localização registrada' if location_registered else 'Localização não informada' }}
-        </div>
       </section>
 
       <section class="mb-4">
