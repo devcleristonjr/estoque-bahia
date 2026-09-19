@@ -32,8 +32,8 @@ def _build_app_with_base_data(active_point: bool = True):
         db.session.add(ponto)
         db.session.flush()
 
-        material_a = Material(nome="Banners", unidade="un", ativo=True)
-        material_b = Material(nome="Faixas", unidade="un", ativo=True)
+        material_a = Material(nome="Banners", quantidade_total=Decimal("1000"), unidade="un", ativo=True)
+        material_b = Material(nome="Faixas", quantidade_total=Decimal("500"), unidade="un", ativo=True)
         db.session.add_all([material_a, material_b])
         db.session.flush()
 
@@ -276,7 +276,7 @@ def test_token_nao_permite_alterar_outro_ponto():
         db.session.add_all([p1, p2])
         db.session.flush()
 
-        material = Material(nome="Banners", unidade="un", ativo=True)
+        material = Material(nome="Banners", quantidade_total=Decimal("1000"), unidade="un", ativo=True)
         db.session.add(material)
         db.session.flush()
 

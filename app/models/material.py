@@ -9,6 +9,7 @@ class Material(TimestampMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(180), nullable=False, unique=True, index=True)
+    quantidade_total = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     unidade = db.Column(db.String(40), nullable=True)
     descricao = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)

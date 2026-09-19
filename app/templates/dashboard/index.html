@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard | Estoque Bahia{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <div>
-    <h1 class="h3 fw-bold mb-1">Dashboard</h1>
+    <h1 class="page-title h3 fw-bold mb-1">Dashboard</h1>
     <p class="text-muted mb-0">Visão geral dos pontos de estoque da Bahia.</p>
   </div>
-  <a href="{{ url_for('dashboard.mapa') }}" class="btn btn-outline-primary">Abrir mapa</a>
+  <a href="{{ url_for('dashboard.mapa') }}" class="btn btn-outline-primary"><i class="bi bi-geo-alt me-2"></i>Abrir mapa</a>
 </div>
 
 <form method="get" class="card card-soft mb-4">
@@ -55,11 +55,40 @@
 </form>
 
 <div class="row g-3 mb-4">
-  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card"><div class="card-body"><div class="text-muted small">Total de pontos</div><div class="display-6 fw-bold">{{ metrics.total_points }}</div></div></div></div>
-  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card"><div class="card-body"><div class="text-muted small">Total de municípios</div><div class="display-6 fw-bold">{{ metrics.total_municipios }}</div></div></div></div>
-  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card"><div class="card-body"><div class="text-muted small">Total de territórios</div><div class="display-6 fw-bold">{{ metrics.total_territorios }}</div></div></div></div>
-  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card"><div class="card-body"><div class="text-muted small">Total de banners</div><div class="display-6 fw-bold">{{ '%.0f'|format(metrics.total_banners) }}</div></div></div></div>
-  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card"><div class="card-body"><div class="text-muted small">Total de materiais</div><div class="display-6 fw-bold">{{ metrics.total_materiais }}</div></div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">Total de pontos</div><div class="display-6 fw-bold">{{ metrics.total_points }}</div></div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">Total de municípios</div><div class="display-6 fw-bold">{{ metrics.total_municipios }}</div></div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">Total de territórios</div><div class="display-6 fw-bold">{{ metrics.total_territorios }}</div></div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">Quantidade alocada</div><div class="display-6 fw-bold">{{ '%.0f'|format(metrics.total_stock_allocated) }}</div></div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">Total de materiais</div><div class="display-6 fw-bold">{{ metrics.total_materiais }}</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">{{ metrics.stock_summary.label }} · Total</div><div class="display-6 fw-bold">{{ '%.0f'|format(metrics.stock_summary.total) }}</div></div></div></div>
+  <div class="col-md-4"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">{{ metrics.stock_summary.label }} · Alocado</div><div class="display-6 fw-bold">{{ '%.0f'|format(metrics.stock_summary.allocated) }}</div></div></div></div>
+  <div class="col-md-4"><div class="card card-soft stat-card h-100"><div class="card-body"><div class="metric-kicker">{{ metrics.stock_summary.label }} · Disponível</div><div class="display-6 fw-bold {% if metrics.stock_summary.is_inconsistent %}text-danger{% endif %}">{{ '%.0f'|format(metrics.stock_summary.available) }}</div></div></div></div>
+</div>
+
+<div class="card card-soft mb-4">
+  <div class="card-header bg-white border-0 fw-semibold">Materiais ativos</div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for item in metrics.material_cards %}
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="material-metric-card">
+            <div class="fw-bold mb-2">{{ item.nome }}</div>
+            <div class="small d-flex justify-content-between"><span class="text-muted">Quantidade total</span><span>{{ '%.0f'|format(item.total) }}</span></div>
+            <div class="small d-flex justify-content-between"><span class="text-muted">Quantidade alocada</span><span>{{ '%.0f'|format(item.allocated) }}</span></div>
+            <div class="small d-flex justify-content-between align-items-center mt-2"><span class="text-muted">Disponível</span><span class="material-metric-value {% if item.is_inconsistent %}text-danger{% endif %}">{{ '%.0f'|format(item.available) }}</span></div>
+            <div class="small mt-2 text-muted">Unidade: {{ item.unidade }}</div>
+          </div>
+        </div>
+      {% else %}
+        <div class="col-12">
+          <p class="text-muted mb-0">Nenhum material ativo cadastrado.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
 <div class="row g-4">
@@ -75,7 +104,7 @@
                   <div class="fw-semibold">{{ ponto.nome }}</div>
                   <div class="text-muted small">{{ ponto.municipio.nome }} • {{ ponto.municipio.territorio.nome }}</div>
                 </div>
-                <span class="badge text-bg-light">Atualizado</span>
+                <span class="badge badge-soft">Atualizado</span>
               </a>
             {% endfor %}
           </div>
@@ -87,17 +116,17 @@
   </div>
   <div class="col-lg-6">
     <div class="card card-soft h-100">
-      <div class="card-header bg-white border-0 fw-semibold">Maiores estoques de banners</div>
+      <div class="card-header bg-white border-0 fw-semibold">Pontos com maior estoque alocado</div>
       <div class="card-body">
-        {% if metrics.top_banner_points %}
+        {% if metrics.top_stock_points %}
           <div class="list-group list-group-flush">
-            {% for row in metrics.top_banner_points %}
+            {% for row in metrics.top_stock_points %}
               <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
                   <div class="fw-semibold">{{ row[0].nome }}</div>
                   <div class="text-muted small">{{ row[0].municipio.nome }}</div>
                 </div>
-                <span class="badge text-bg-primary">{{ '%.0f'|format(row.banner_total) }}</span>
+                <span class="badge text-bg-primary">{{ '%.0f'|format(row.stock_total) }}</span>
               </div>
             {% endfor %}
           </div>
@@ -107,11 +136,11 @@
       </div>
     </div>
   </div>
-  <div class="col-12">
+  <div class="col-12" id="ultimas-movimentacoes">
     <div class="card card-soft">
       <div class="card-header bg-white border-0 fw-semibold">Últimas movimentações</div>
       <div class="card-body table-responsive">
-        <table class="table align-middle mb-0">
+        <table class="table table-modern align-middle mb-0">
           <thead>
             <tr><th>Data</th><th>Usuário</th><th>Local</th><th>Material</th><th>Tipo</th><th>Qtd.</th><th>Antes</th><th>Depois</th></tr>
           </thead>

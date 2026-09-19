@@ -35,8 +35,8 @@ def _build_app_for_daily_reset():
         db.session.add_all([ativo, ativo_zero, inativo])
         db.session.flush()
 
-        banners = Material(nome="Banners Reset", unidade="un", ativo=True)
-        faixas = Material(nome="Faixas Reset", unidade="un", ativo=True)
+        banners = Material(nome="Banners Reset", quantidade_total=Decimal("109"), unidade="un", ativo=True)
+        faixas = Material(nome="Faixas Reset", quantidade_total=Decimal("3"), unidade="un", ativo=True)
         db.session.add_all([banners, faixas])
         db.session.flush()
 

@@ -14,8 +14,15 @@
             {% for error in form.nome.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           </div>
           <div class="mb-3">
+            {{ form.quantidade_total.label(class_='form-label') }}
+            {{ form.quantidade_total(class_='form-control') }}
+            <div class="form-text">Este valor representa o estoque geral máximo do material.</div>
+            {% for error in form.quantidade_total.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
             {{ form.unidade.label(class_='form-label') }}
-            {{ form.unidade(class_='form-control') }}
+            {{ form.unidade(class_='form-select') }}
+            <div class="form-text">Selecione a unidade de medida do material.</div>
             {% for error in form.unidade.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           </div>
           <div class="mb-3">

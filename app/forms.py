@@ -11,6 +11,13 @@ from wtforms.validators import DataRequired, Email, Length, NumberRange, Optiona
 PUBLIC_IMAGE_FIELD_LABEL = "Foto do local"
 PUBLIC_OBSERVACOES_LABEL = "Observ" + "ações"
 PUBLIC_IMAGE_VALIDATION_MESSAGE = "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."
+MATERIAL_UNIT_CHOICES = [
+    ("unidade", "Unidade"),
+    ("pacote", "Pacote"),
+    ("caixa", "Caixa"),
+    ("metro", "Metro"),
+    ("rolo", "Rolo"),
+]
 
 
 class UsuarioForm(FlaskForm):
@@ -48,7 +55,13 @@ class LoginForm(FlaskForm):
 
 class MaterialForm(FlaskForm):
     nome = StringField("Nome", validators=[DataRequired(), Length(max=180)])
-    unidade = StringField("Unidade", validators=[Optional(), Length(max=40)])
+    quantidade_total = DecimalField(
+        "Estoque total",
+        places=2,
+        rounding=None,
+        validators=[DataRequired(), NumberRange(min=Decimal("0"))],
+    )
+    unidade = SelectField("Unidade de medida", choices=MATERIAL_UNIT_CHOICES, validators=[DataRequired()])
     descricao = TextAreaField("Descrição", validators=[Optional(), Length(max=2000)])
     ativo = BooleanField("Ativo", default=True)
 

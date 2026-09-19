@@ -37,7 +37,7 @@
           {% for row in quantity_rows %}
             <div class="material-row">
               <div class="fw-semibold">{{ row.material.nome }}</div>
-              <div class="small text-muted">Quantidade atual: {{ '%.0f'|format(row.current_quantity) }}</div>
+              <div class="small text-muted">Total {{ '%.0f'|format(row.total_quantity) }} · Alocado {{ '%.0f'|format(row.allocated_quantity) }} · Disponível {{ '%.0f'|format(row.available_quantity) }}</div>
               <div class="fw-bold">{{ '%.0f'|format(row.current_quantity) }} → {{ '%.0f'|format(row.new_quantity) }}</div>
             </div>
           {% endfor %}
@@ -62,7 +62,9 @@
           {% for row in materiais %}
             <div class="material-row">
               <div class="fw-semibold mb-1">{{ row.material.nome }}</div>
-              <div class="small text-muted mb-2">Quantidade atual: {{ '%.0f'|format(row.current_quantity) }}</div>
+              <div class="small text-muted">Estoque total: {{ '%.0f'|format(row.total_quantity) }}</div>
+              <div class="small text-muted">Já alocado: {{ '%.0f'|format(row.allocated_quantity) }}</div>
+              <div class="small text-muted mb-2">Disponível: {{ '%.0f'|format(row.available_quantity) }} · Máximo final neste ponto: {{ '%.0f'|format(row.max_for_point) }}</div>
               <label class="form-label small mb-1" for="qtd_{{ row.material.id }}">Nova quantidade</label>
               <input id="qtd_{{ row.material.id }}" class="form-control form-control-lg" type="number" min="0" step="1" name="qtd_{{ row.material.id }}" value="{{ request.form.get('qtd_' ~ row.material.id, '%.0f'|format(row.current_quantity)) }}">
             </div>

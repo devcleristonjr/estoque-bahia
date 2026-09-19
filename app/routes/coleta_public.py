@@ -13,7 +13,7 @@ from app.models.estoque_material import EstoqueMaterial
 from app.models.material import Material
 from app.models.municipio import Municipio
 from app.models.ponto_estoque import PontoEstoque
-from app.services import update_stock
+from app.services import get_material_stock_snapshots, update_stock, validate_material_allocation
 from app.timezone import agora_bahia
 from app.utils import (
     digits_only,
@@ -38,6 +38,10 @@ def _active_municipios() -> list[Municipio]:
 
 def _active_materiais() -> list[Material]:
     return Material.query.filter_by(ativo=True).order_by(Material.nome.asc()).all()
+
+
+def _material_snapshots(materiais: list[Material]) -> dict[int, dict]:
+    return get_material_stock_snapshots([material.id for material in materiais])
 
 
 def _normalize_text(value: str | None) -> str:
@@ -70,15 +74,22 @@ def _load_stock_map(point_id: int) -> dict[int, EstoqueMaterial]:
 
 def _material_rows_for_point(point: PontoEstoque) -> list[dict]:
     stock_map = _load_stock_map(point.id)
+    materiais = _active_materiais()
+    snapshots = _material_snapshots(materiais)
     rows = []
-    for material in _active_materiais():
+    for material in materiais:
         stock = stock_map.get(material.id)
         current_quantity = Decimal(stock.quantidade if stock is not None else 0)
+        snapshot = snapshots.get(material.id, {})
         rows.append(
             {
                 "material": material,
                 "current_quantity": current_quantity,
                 "stock_exists": stock is not None,
+                "total_quantity": snapshot.get("total", Decimal("0")),
+                "allocated_quantity": snapshot.get("allocated", Decimal("0")),
+                "available_quantity": snapshot.get("available", Decimal("0")),
+                "max_for_point": snapshot.get("available", Decimal("0")) + current_quantity,
             }
         )
     return rows
@@ -170,6 +181,29 @@ def _build_quantities_from_form(form_data, materiais: list[Material], current_ma
     return quantities, errors
 
 
+def _validate_quantities_against_totals(
+    materiais: list[Material],
+    quantities: dict[int, Decimal],
+    point_id: int | None = None,
+    current_map: dict[int, Decimal] | None = None,
+) -> list[str]:
+    errors = []
+    current_map = current_map or {}
+    for material in materiais:
+        current_quantity = current_map.get(material.id, Decimal("0"))
+        target_quantity = quantities.get(material.id, current_quantity)
+        try:
+            validate_material_allocation(
+                material,
+                target_quantity,
+                current_quantity=current_quantity,
+                point_id=point_id,
+            )
+        except ValueError as exc:
+            errors.append(f"{material.nome}: {exc}")
+    return errors
+
+
 @coleta_public_bp.get("/coleta")
 def index():
     return render_template("coleta_public/index.html")
@@ -180,6 +214,7 @@ def novo():  # NOSONAR
     form = ColetaPublicCadastroForm()
     municipios = _active_municipios()
     materiais = _active_materiais()
+    snapshots = _material_snapshots(materiais)
     form.municipio_id.choices = [(municipio.id, f"{municipio.nome} - {municipio.territorio.nome}") for municipio in municipios]
 
     if request.method == "GET":
@@ -188,6 +223,7 @@ def novo():  # NOSONAR
             form=form,
             municipios=municipios,
             materiais=materiais,
+            snapshots=snapshots,
             preview=False,
             duplicate_points=[],
             quantities=[],
@@ -200,6 +236,7 @@ def novo():  # NOSONAR
             form=form,
             municipios=municipios,
             materiais=materiais,
+            snapshots=snapshots,
             preview=False,
             duplicate_points=[],
             quantities=[],
@@ -214,6 +251,7 @@ def novo():  # NOSONAR
             form=form,
             municipios=municipios,
             materiais=materiais,
+            snapshots=snapshots,
             preview=False,
             duplicate_points=[],
             quantities=[],
@@ -235,6 +273,7 @@ def novo():  # NOSONAR
         form.latitude.data = f"{latitude:.6f}"
         form.longitude.data = f"{longitude:.6f}"
     quantities, errors = _build_quantities_from_form(request.form, materiais)
+    errors.extend(_validate_quantities_against_totals(materiais, quantities))
     if errors:
         for message in errors:
             flash(message, "danger")
@@ -243,6 +282,7 @@ def novo():  # NOSONAR
             form=form,
             municipios=municipios,
             materiais=materiais,
+            snapshots=snapshots,
             preview=False,
             duplicate_points=[],
             quantities=[],
@@ -261,6 +301,7 @@ def novo():  # NOSONAR
                 form=form,
                 municipios=municipios,
                 materiais=materiais,
+                snapshots=snapshots,
                 preview=False,
                 duplicate_points=[],
                 quantities=[],
@@ -272,6 +313,10 @@ def novo():  # NOSONAR
             "material": material,
             "current_quantity": Decimal("0"),
             "new_quantity": quantities.get(material.id, Decimal("0")),
+            "total_quantity": snapshots.get(material.id, {}).get("total", Decimal("0")),
+            "allocated_quantity": snapshots.get(material.id, {}).get("allocated", Decimal("0")),
+            "available_quantity": snapshots.get(material.id, {}).get("available", Decimal("0")),
+            "max_for_point": snapshots.get(material.id, {}).get("available", Decimal("0")),
         }
         for material in materiais
     ]
@@ -283,6 +328,7 @@ def novo():  # NOSONAR
             form=form,
             municipios=municipios,
             materiais=materiais,
+            snapshots=snapshots,
             preview=True,
             duplicate_points=duplicate_points,
             quantities=preview_rows,
@@ -398,6 +444,7 @@ def atualizar_form(ponto_id: int):  # NOSONAR
         )
 
     quantities, errors = _build_quantities_from_form(request.form, materiais, current_map=current_map)
+    errors.extend(_validate_quantities_against_totals(materiais, quantities, point_id=ponto.id, current_map=current_map))
     if errors:
         for message in errors:
             flash(message, "danger")
@@ -436,6 +483,10 @@ def atualizar_form(ponto_id: int):  # NOSONAR
                 "material": material,
                 "current_quantity": current_quantity,
                 "new_quantity": new_quantity,
+                "total_quantity": row["total_quantity"],
+                "allocated_quantity": row["allocated_quantity"],
+                "available_quantity": row["available_quantity"],
+                "max_for_point": row["max_for_point"],
             }
         )
 

@@ -10,12 +10,33 @@ from app.models.coleta_registro import ColetaRegistro
 from app.models.estoque_material import EstoqueMaterial
 from app.models.material import Material
 from app.models.ponto_estoque import PontoEstoque
-from app.services import update_stock
+from app.services import get_material_stock_snapshots, update_stock, validate_material_allocation
 from app.timezone import agora_bahia
 from app.utils import parse_coordinate_to_decimal, save_uploaded_image
 
 
 coleta_bp = Blueprint("coleta", __name__)
+COLETA_TEMPLATE = "coleta/form.html"
+
+
+def _build_stock_rows(estoque_items: list[EstoqueMaterial]) -> list[dict]:
+    snapshots = get_material_stock_snapshots([item.material_id for item in estoque_items])
+    rows = []
+    for item in estoque_items:
+        snapshot = snapshots.get(item.material_id, {})
+        current_quantity = Decimal(item.quantidade or 0)
+        rows.append(
+            {
+                "material": item.material,
+                "material_id": item.material_id,
+                "current_quantity": current_quantity,
+                "total_quantity": snapshot.get("total", Decimal("0")),
+                "allocated_quantity": snapshot.get("allocated", Decimal("0")),
+                "available_quantity": snapshot.get("available", Decimal("0")),
+                "max_for_point": snapshot.get("available", Decimal("0")) + current_quantity,
+            }
+        )
+    return rows
 
 
 @coleta_bp.route("/coleta/<token>", methods=["GET", "POST"])
@@ -24,7 +45,7 @@ def coleta_form(token: str):
     if ponto is None or not ponto.ativo:
         return (
             render_template(
-                "coleta/form.html",
+                COLETA_TEMPLATE,
                 invalid_link=True,
                 invalid_message="Link de coleta inválido ou ponto de estoque não disponível.",
             ),
@@ -38,13 +59,14 @@ def coleta_form(token: str):
         .order_by(Material.nome.asc())
         .all()
     )
+    stock_rows = _build_stock_rows(estoque_items)
 
     if request.method == "GET":
         return render_template(
-            "coleta/form.html",
+            COLETA_TEMPLATE,
             ponto=ponto,
             form=form,
-            estoque_items=estoque_items,
+            estoque_rows=stock_rows,
             confirm_mode=False,
             updates=[],
             location_registered=False,
@@ -52,10 +74,10 @@ def coleta_form(token: str):
 
     if not form.validate_on_submit():
         return render_template(
-            "coleta/form.html",
+            COLETA_TEMPLATE,
             ponto=ponto,
             form=form,
-            estoque_items=estoque_items,
+            estoque_rows=stock_rows,
             confirm_mode=False,
             updates=[],
             location_registered=bool(form.latitude.data and form.longitude.data),
@@ -64,30 +86,42 @@ def coleta_form(token: str):
     updates = []
     errors = []
 
-    for item in estoque_items:
-        raw_value = request.form.get(f"qtd_{item.material_id}", "").strip()
+    for row in stock_rows:
+        material = row["material"]
+        current_quantity = row["current_quantity"]
+        raw_value = request.form.get(f"qtd_{material.id}", "").strip()
         if raw_value == "":
-            nova_quantidade = Decimal(item.quantidade)
+            nova_quantidade = current_quantity
         else:
             normalized = raw_value.replace(",", ".")
             try:
                 nova_quantidade = Decimal(normalized)
             except (InvalidOperation, ValueError):
-                errors.append(f"Quantidade inválida para {item.material.nome}.")
+                errors.append(f"Quantidade inválida para {material.nome}.")
                 continue
         if nova_quantidade < 0:
-            errors.append(f"A quantidade de {item.material.nome} não pode ser negativa.")
+            errors.append(f"A quantidade de {material.nome} não pode ser negativa.")
             continue
 
-        atual = Decimal(item.quantidade)
+        try:
+            validate_material_allocation(material, nova_quantidade, current_quantity=current_quantity, point_id=ponto.id)
+        except ValueError as exc:
+            errors.append(f"{material.nome}: {exc}")
+            continue
+
+        atual = current_quantity
         delta = nova_quantidade - atual
         updates.append(
             {
-                "material": item.material,
+                "material": material,
                 "anterior": atual,
                 "nova": nova_quantidade,
                 "delta": delta,
                 "changed": delta != 0,
+                "total_quantity": row["total_quantity"],
+                "allocated_quantity": row["allocated_quantity"],
+                "available_quantity": row["available_quantity"],
+                "max_for_point": row["max_for_point"],
             }
         )
 
@@ -102,10 +136,10 @@ def coleta_form(token: str):
         for message in errors:
             flash(message, "danger")
         return render_template(
-            "coleta/form.html",
+            COLETA_TEMPLATE,
             ponto=ponto,
             form=form,
-            estoque_items=estoque_items,
+            estoque_rows=stock_rows,
             confirm_mode=False,
             updates=updates,
             location_registered=location_registered,
@@ -121,19 +155,19 @@ def coleta_form(token: str):
             except ValueError as exc:
                 flash(str(exc), "danger")
                 return render_template(
-                    "coleta/form.html",
+                    COLETA_TEMPLATE,
                     ponto=ponto,
                     form=form,
-                    estoque_items=estoque_items,
+                    estoque_rows=stock_rows,
                     confirm_mode=False,
                     updates=updates,
                     location_registered=location_registered,
                 )
         return render_template(
-            "coleta/form.html",
+            COLETA_TEMPLATE,
             ponto=ponto,
             form=form,
-            estoque_items=estoque_items,
+            estoque_rows=stock_rows,
             confirm_mode=True,
             updates=updates,
             location_registered=location_registered,
@@ -147,10 +181,10 @@ def coleta_form(token: str):
         except ValueError as exc:
             flash(str(exc), "danger")
             return render_template(
-                "coleta/form.html",
+                COLETA_TEMPLATE,
                 ponto=ponto,
                 form=form,
-                estoque_items=estoque_items,
+                estoque_rows=stock_rows,
                 confirm_mode=False,
                 updates=updates,
                 location_registered=location_registered,
@@ -207,10 +241,10 @@ def coleta_form(token: str):
     )
     form = ColetaEstoqueForm()
     return render_template(
-        "coleta/form.html",
+        COLETA_TEMPLATE,
         ponto=ponto,
         form=form,
-        estoque_items=estoque_items_after,
+        estoque_rows=_build_stock_rows(estoque_items_after),
         confirm_mode=False,
         updates=[],
         location_registered=False,

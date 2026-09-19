@@ -238,7 +238,7 @@ def test_map_without_filters_shows_total_stock_not_only_banners():
         db.session.add(municipio)
         db.session.flush()
 
-        adesivos = Material(nome="Adesivos", unidade="un", ativo=True)
+        adesivos = Material(nome="Adesivos", quantidade_total=Decimal("350"), unidade="un", ativo=True)
         db.session.add(adesivos)
         db.session.flush()
 
@@ -276,6 +276,121 @@ def test_map_without_filters_shows_total_stock_not_only_banners():
     assert point["metric_label"] == "Estoque total"
     assert point["metric_value"] == 350.0
     assert point["materiais_resumo"] == [{"nome": "Adesivos", "quantidade": 350.0}]
+
+
+def test_dashboard_shows_dynamic_material_cards_for_all_active_materials():
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        admin = Usuario(nome="Admin", email="admin@example.com", perfil="ADMIN", ativo=True)
+        admin.set_password("123456")
+        db.session.add(admin)
+
+        territorio = Territorio(nome="Litoral Norte", codigo="LN", ativo=True)
+        db.session.add(territorio)
+        db.session.flush()
+
+        municipio = Municipio(nome="Alagoinhas", territorio_id=territorio.id, codigo_ibge="2900702", ativo=True)
+        db.session.add(municipio)
+        db.session.flush()
+
+        ponto = PontoEstoque(
+            nome="Comite Central",
+            municipio_id=municipio.id,
+            latitude=Decimal("-12.133333"),
+            longitude=Decimal("-38.416667"),
+            ativo=True,
+        )
+        db.session.add(ponto)
+        db.session.flush()
+
+        adesivos = Material(nome="Adesivos", quantidade_total=Decimal("2000"), unidade="unidade", ativo=True)
+        banners = Material(nome="Banners", quantidade_total=Decimal("3000"), unidade="unidade", ativo=True)
+        camisas = Material(nome="Camisas", quantidade_total=Decimal("500"), unidade="unidade", ativo=False)
+        db.session.add_all([adesivos, banners, camisas])
+        db.session.flush()
+
+        db.session.add_all(
+            [
+                EstoqueMaterial(ponto_estoque_id=ponto.id, material_id=adesivos.id, quantidade=Decimal("1512")),
+                EstoqueMaterial(ponto_estoque_id=ponto.id, material_id=banners.id, quantidade=Decimal("700")),
+                EstoqueMaterial(ponto_estoque_id=ponto.id, material_id=camisas.id, quantidade=Decimal("100")),
+            ]
+        )
+        db.session.commit()
+
+    client = app.test_client()
+    client.post(
+        "/login",
+        data={"email": "admin@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Materiais ativos" in html
+    assert "Adesivos" in html
+    assert "Banners" in html
+    assert "Camisas" not in html
+    assert "Estoque alocado nos pontos" in html
+    assert "Total de banners" not in html
+
+
+def test_dashboard_api_returns_dynamic_material_cards():
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        admin = Usuario(nome="Admin", email="admin@example.com", perfil="ADMIN", ativo=True)
+        admin.set_password("123456")
+        db.session.add(admin)
+
+        territorio = Territorio(nome="Litoral Norte", codigo="LN", ativo=True)
+        db.session.add(territorio)
+        db.session.flush()
+
+        municipio = Municipio(nome="Alagoinhas", territorio_id=territorio.id, codigo_ibge="2900702", ativo=True)
+        db.session.add(municipio)
+        db.session.flush()
+
+        ponto = PontoEstoque(
+            nome="Comite Central",
+            municipio_id=municipio.id,
+            latitude=Decimal("-12.133333"),
+            longitude=Decimal("-38.416667"),
+            ativo=True,
+        )
+        db.session.add(ponto)
+        db.session.flush()
+
+        adesivos = Material(nome="Adesivos", quantidade_total=Decimal("2000"), unidade="unidade", ativo=True)
+        banners = Material(nome="Banners", quantidade_total=Decimal("3000"), unidade="unidade", ativo=True)
+        db.session.add_all([adesivos, banners])
+        db.session.flush()
+
+        db.session.add_all(
+            [
+                EstoqueMaterial(ponto_estoque_id=ponto.id, material_id=adesivos.id, quantidade=Decimal("1512")),
+                EstoqueMaterial(ponto_estoque_id=ponto.id, material_id=banners.id, quantidade=Decimal("700")),
+            ]
+        )
+        db.session.commit()
+
+    client = app.test_client()
+    client.post(
+        "/login",
+        data={"email": "admin@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/api/dashboard")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert "material_cards" in payload
+    names = {item["nome"] for item in payload["material_cards"]}
+    assert {"Adesivos", "Banners"}.issubset(names)
 
 
 def test_admin_can_delete_point_and_operator_cannot():
@@ -364,7 +479,7 @@ def test_admin_can_delete_material_and_operator_cannot():
         operador.set_password("123456")
         db.session.add_all([admin, operador])
 
-        material = Material(nome="Material para excluir", unidade="un", ativo=True)
+        material = Material(nome="Material para excluir", quantidade_total=Decimal("0"), unidade="un", ativo=True)
         db.session.add(material)
         db.session.commit()
         material_id = material.id
@@ -389,7 +504,7 @@ def test_admin_can_delete_material_and_operator_cannot():
         assert db.session.get(Material, material_id) is None
 
     with app.app_context():
-        protected_material = Material(nome="Material protegido", unidade="un", ativo=True)
+        protected_material = Material(nome="Material protegido", quantidade_total=Decimal("0"), unidade="un", ativo=True)
         db.session.add(protected_material)
         db.session.commit()
         protected_material_id = protected_material.id
@@ -408,3 +523,57 @@ def test_admin_can_delete_material_and_operator_cannot():
         follow_redirects=False,
     )
     assert forbidden_response.status_code == 403
+
+
+def test_material_form_uses_controlled_unit_choices():
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        admin = Usuario(nome="Admin", email="admin@example.com", perfil="ADMIN", ativo=True)
+        admin.set_password("123456")
+        db.session.add(admin)
+        db.session.commit()
+
+    client = app.test_client()
+    client.post(
+        "/login",
+        data={"email": "admin@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/materiais/novo")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<select class="form-select" id="unidade" name="unidade" required>' in html
+    assert '<option value="unidade">Unidade</option>' in html
+    assert '<option value="pacote">Pacote</option>' in html
+    assert '<option value="caixa">Caixa</option>' in html
+    assert '<option value="metro">Metro</option>' in html
+    assert '<option value="rolo">Rolo</option>' in html
+
+
+def test_material_index_flags_legacy_unit_values_for_review():
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        admin = Usuario(nome="Admin", email="admin@example.com", perfil="ADMIN", ativo=True)
+        admin.set_password("123456")
+        db.session.add(admin)
+        legacy = Material(nome="Banner legado", quantidade_total=Decimal("100"), unidade="500", ativo=True)
+        db.session.add(legacy)
+        db.session.commit()
+
+    client = app.test_client()
+    client.post(
+        "/login",
+        data={"email": "admin@example.com", "password": "123456"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/materiais/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Unidades legadas fora do padrão" in html
+    assert 'Banner legado: unidade atual "500"' in html

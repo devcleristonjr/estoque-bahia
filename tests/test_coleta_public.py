@@ -37,9 +37,9 @@ def _build_public_app():
         db.session.flush()
 
         materiais = [
-            Material(nome="Banners", unidade="un", ativo=True),
-            Material(nome="Faixas", unidade="un", ativo=True),
-            Material(nome="Adesivos", unidade="un", ativo=True),
+            Material(nome="Banners", quantidade_total=Decimal("2000"), unidade="un", ativo=True),
+            Material(nome="Faixas", quantidade_total=Decimal("1000"), unidade="un", ativo=True),
+            Material(nome="Adesivos", quantidade_total=Decimal("500"), unidade="un", ativo=True),
         ]
         db.session.add_all(materiais)
         db.session.flush()

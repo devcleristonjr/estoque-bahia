@@ -11,7 +11,7 @@ from app.models.material import Material
 from app.models.municipio import Municipio
 from app.models.ponto_estoque import PontoEstoque
 from app.models.territorio import Territorio
-from app.services import build_map_points, get_dashboard_metrics
+from app.services import build_map_points, get_dashboard_metrics, get_material_stock_snapshot, get_material_stock_snapshots
 
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -52,9 +52,19 @@ def list_municipios():
 @login_required
 def list_materiais():
     materiais = Material.query.filter_by(ativo=True).order_by(Material.nome.asc()).all()
+    snapshots = get_material_stock_snapshots([material.id for material in materiais])
     return jsonify(
         [
-            {"id": material.id, "nome": material.nome, "unidade": material.unidade, "descricao": material.descricao}
+            {
+                "id": material.id,
+                "nome": material.nome,
+                "unidade": material.unidade,
+                "descricao": material.descricao,
+                "quantidade_total": float(snapshots.get(material.id, {}).get("total", 0)),
+                "quantidade_alocada": float(snapshots.get(material.id, {}).get("allocated", 0)),
+                "quantidade_disponivel": float(snapshots.get(material.id, {}).get("available", 0)),
+                "inconsistente": bool(snapshots.get(material.id, {}).get("is_inconsistent", False)),
+            }
             for material in materiais
         ]
     )
@@ -83,6 +93,7 @@ def list_estoques():
 def get_estoque(ponto_id: int):
     ponto = PontoEstoque.query.get_or_404(ponto_id)
     estoque = EstoqueMaterial.query.filter_by(ponto_estoque_id=ponto.id).join(EstoqueMaterial.material).order_by(Material.nome.asc()).all()
+    snapshots = get_material_stock_snapshots([item.material_id for item in estoque])
     return jsonify(
         {
             "id": ponto.id,
@@ -97,7 +108,14 @@ def get_estoque(ponto_id: int):
             "responsavel_whatsapp": ponto.responsavel_whatsapp,
             "foto": ponto.foto,
             "estoque": [
-                {"material": item.material.nome, "quantidade": float(item.quantidade)} for item in estoque
+                {
+                    "material": item.material.nome,
+                    "quantidade": float(item.quantidade),
+                    "quantidade_total": float(snapshots.get(item.material_id, {}).get("total", 0)),
+                    "quantidade_alocada": float(snapshots.get(item.material_id, {}).get("allocated", 0)),
+                    "quantidade_disponivel": float(snapshots.get(item.material_id, {}).get("available", 0)),
+                }
+                for item in estoque
             ],
         }
     )
@@ -178,7 +196,27 @@ def dashboard_data():
             "total_municipios": metrics["total_municipios"],
             "total_territorios": metrics["total_territorios"],
             "total_materiais": metrics["total_materiais"],
+            "total_stock_allocated": float(metrics["total_stock_allocated"]),
             "total_banners": float(metrics["total_banners"]),
+            "stock_summary": {
+                "label": metrics["stock_summary"]["label"],
+                "total": float(metrics["stock_summary"]["total"]),
+                "allocated": float(metrics["stock_summary"]["allocated"]),
+                "available": float(metrics["stock_summary"]["available"]),
+                "is_inconsistent": metrics["stock_summary"]["is_inconsistent"],
+            },
+            "material_cards": [
+                {
+                    "material_id": item["material_id"],
+                    "nome": item["nome"],
+                    "unidade": item["unidade"],
+                    "total": float(item["total"]),
+                    "allocated": float(item["allocated"]),
+                    "available": float(item["available"]),
+                    "is_inconsistent": item["is_inconsistent"],
+                }
+                for item in metrics["material_cards"]
+            ],
         }
     )
 

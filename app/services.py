@@ -14,6 +14,142 @@ from app.models.territorio import Territorio
 from app.utils import build_whatsapp_url
 
 
+def _supports_row_locking() -> bool:
+    engine = db.session.get_bind()
+    return engine is not None and engine.dialect.name != "sqlite"
+
+
+def _format_quantity(value: Decimal) -> str:
+    decimal_value = Decimal(value)
+    if decimal_value == decimal_value.to_integral_value():
+        return str(decimal_value.quantize(Decimal("1")))
+    return format(decimal_value.normalize(), "f")
+
+
+def _sum_allocated_stock(material_id: int, exclude_point_id: int | None = None) -> Decimal:
+    query = db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0)).filter(
+        EstoqueMaterial.material_id == material_id
+    )
+    if exclude_point_id is not None:
+        query = query.filter(EstoqueMaterial.ponto_estoque_id != exclude_point_id)
+    return Decimal(query.scalar() or 0)
+
+
+def _sum_allocated_stock_all() -> Decimal:
+    query = db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0))
+    return Decimal(query.scalar() or 0)
+
+
+def _sum_total_stock(material_id: int | None = None) -> Decimal:
+    query = db.session.query(func.coalesce(func.sum(Material.quantidade_total), 0))
+    if material_id is not None:
+        query = query.filter(Material.id == material_id)
+    return Decimal(query.scalar() or 0)
+
+
+def _load_material_for_update(material_id: int) -> Material:
+    query = Material.query.filter_by(id=material_id)
+    if _supports_row_locking():
+        query = query.with_for_update()
+    material = query.first()
+    if material is None:
+        raise ValueError("Material não encontrado.")
+    return material
+
+
+def get_material_stock_snapshot(material_id: int, exclude_point_id: int | None = None) -> dict:
+    material = db.session.get(Material, material_id)
+    if material is None:
+        raise ValueError("Material não encontrado.")
+
+    total = Decimal(material.quantidade_total or 0)
+    allocated = _sum_allocated_stock(material.id, exclude_point_id=exclude_point_id)
+    available = total - allocated
+    return {
+        "material_id": material.id,
+        "nome": material.nome,
+        "total": total,
+        "allocated": allocated,
+        "available": available,
+        "is_inconsistent": allocated > total,
+    }
+
+
+def get_material_stock_snapshots(material_ids: list[int] | None = None) -> dict[int, dict]:
+    query = Material.query
+    if material_ids is not None:
+        if not material_ids:
+            return {}
+        query = query.filter(Material.id.in_(material_ids))
+
+    materials = query.order_by(Material.nome.asc()).all()
+    if not materials:
+        return {}
+
+    allocation_query = (
+        db.session.query(
+            EstoqueMaterial.material_id,
+            func.coalesce(func.sum(EstoqueMaterial.quantidade), 0),
+        )
+        .group_by(EstoqueMaterial.material_id)
+    )
+    if material_ids is not None:
+        allocation_query = allocation_query.filter(EstoqueMaterial.material_id.in_(material_ids))
+
+    allocated_map = {material_id: Decimal(total or 0) for material_id, total in allocation_query.all()}
+    snapshots = {}
+    for material in materials:
+        total = Decimal(material.quantidade_total or 0)
+        allocated = allocated_map.get(material.id, Decimal("0"))
+        snapshots[material.id] = {
+            "material_id": material.id,
+            "nome": material.nome,
+            "total": total,
+            "allocated": allocated,
+            "available": total - allocated,
+            "is_inconsistent": allocated > total,
+        }
+    return snapshots
+
+
+def list_material_stock_inconsistencies(material_ids: list[int] | None = None) -> list[dict]:
+    snapshots = get_material_stock_snapshots(material_ids)
+    return [snapshot for snapshot in snapshots.values() if snapshot["is_inconsistent"]]
+
+
+def validate_material_allocation(
+    material: Material,
+    target_quantity: Decimal,
+    current_quantity: Decimal = Decimal("0"),
+    point_id: int | None = None,
+) -> dict:
+    snapshot = get_material_stock_snapshot(material.id, exclude_point_id=point_id)
+    max_for_point = snapshot["available"] + current_quantity
+    if target_quantity > max_for_point:
+        raise ValueError(
+            "Quantidade indisponível. Existem apenas "
+            f"{_format_quantity(max(max_for_point, Decimal('0')))} unidades disponíveis para alocação."
+        )
+    return {
+        **snapshot,
+        "current_quantity": current_quantity,
+        "max_for_point": max_for_point,
+    }
+
+
+def set_material_total(material: Material, quantidade_total: Decimal) -> Material:
+    locked_material = _load_material_for_update(material.id)
+    allocated = _sum_allocated_stock(locked_material.id)
+    if quantidade_total < allocated:
+        raise ValueError(
+            "Não é possível reduzir o estoque total para "
+            f"{_format_quantity(quantidade_total)} unidades porque "
+            f"{_format_quantity(allocated)} unidades já estão alocadas nos pontos."
+        )
+    locked_material.quantidade_total = quantidade_total
+    return locked_material
+
+
 def _apply_point_filters(query, filters: dict):
     if territorio_id := filters.get("territorio_id"):
         query = query.filter(Municipio.territorio_id == territorio_id)
@@ -27,31 +163,43 @@ def _apply_point_filters(query, filters: dict):
     return query.distinct()
 
 
-def _banner_filter(query, filters: dict):
-    query = query.join(EstoqueMaterial.material)
-    if material_id := filters.get("material_id"):
-        return query.filter(EstoqueMaterial.material_id == material_id)
-    return query.filter(Material.nome.ilike("%banner%"))
-
-
-def _aggregate_banner_total(filters: dict) -> Decimal:
+def _aggregate_allocated_total(filters: dict) -> Decimal:
     query = (
         db.session.query(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0))
         .select_from(PontoEstoque)
         .join(PontoEstoque.municipio)
         .join(PontoEstoque.estoques)
-        .join(EstoqueMaterial.material)
     )
     query = _apply_point_filters(query, filters)
     if material_id := filters.get("material_id"):
         query = query.filter(EstoqueMaterial.material_id == material_id)
-    query = _banner_filter(query, filters)
     value = query.scalar() or Decimal("0")
     return Decimal(value)
 
 
+def _material_dashboard_cards() -> list[dict]:
+    materiais = Material.query.filter_by(ativo=True).order_by(Material.nome.asc()).all()
+    snapshots = get_material_stock_snapshots([material.id for material in materiais])
+    cards = []
+    for material in materiais:
+        snapshot = snapshots.get(material.id, {})
+        cards.append(
+            {
+                "material_id": material.id,
+                "nome": material.nome,
+                "unidade": material.unidade or "-",
+                "total": snapshot.get("total", Decimal("0")),
+                "allocated": snapshot.get("allocated", Decimal("0")),
+                "available": snapshot.get("available", Decimal("0")),
+                "is_inconsistent": snapshot.get("is_inconsistent", False),
+            }
+        )
+    return cards
+
+
 def get_dashboard_metrics(filters: dict | None = None) -> dict:
     filters = filters or {}
+    selected_material = db.session.get(Material, filters.get("material_id")) if filters.get("material_id") else None
     base_points = PontoEstoque.query.join(PontoEstoque.municipio)
     base_points = _apply_point_filters(base_points, filters)
     if material_id := filters.get("material_id"):
@@ -76,22 +224,21 @@ def get_dashboard_metrics(filters: dict | None = None) -> dict:
         total_materiais = total_materiais.filter(EstoqueMaterial.material_id == material_id)
     total_materiais = _apply_point_filters(total_materiais, filters).scalar() or 0
 
-    total_banners = _aggregate_banner_total(filters)
+    total_stock_allocated = _aggregate_allocated_total(filters)
     recent_points = active_points.order_by(PontoEstoque.updated_at.desc()).limit(5).all()
-    top_banner_points = (
+    top_stock_points = (
         db.session.query(
             PontoEstoque,
-            func.coalesce(func.sum(EstoqueMaterial.quantidade), 0).label("banner_total"),
+            func.coalesce(func.sum(EstoqueMaterial.quantidade), 0).label("stock_total"),
         )
         .join(PontoEstoque.municipio)
         .join(PontoEstoque.estoques)
     )
-    top_banner_points = _apply_point_filters(top_banner_points.filter(PontoEstoque.ativo.is_(True)), filters)
+    top_stock_points = _apply_point_filters(top_stock_points.filter(PontoEstoque.ativo.is_(True)), filters)
     if material_id := filters.get("material_id"):
-        top_banner_points = top_banner_points.filter(EstoqueMaterial.material_id == material_id)
-    top_banner_points = _banner_filter(top_banner_points, filters)
-    top_banner_points = (
-        top_banner_points.group_by(PontoEstoque.id)
+        top_stock_points = top_stock_points.filter(EstoqueMaterial.material_id == material_id)
+    top_stock_points = (
+        top_stock_points.group_by(PontoEstoque.id)
         .order_by(func.coalesce(func.sum(EstoqueMaterial.quantidade), 0).desc())
         .limit(5)
         .all()
@@ -105,15 +252,32 @@ def get_dashboard_metrics(filters: dict | None = None) -> dict:
         .all()
     )
 
+    stock_total = _sum_total_stock(filters.get("material_id"))
+    stock_allocated = _sum_allocated_stock(filters["material_id"]) if filters.get("material_id") else _sum_allocated_stock_all()
+    stock_summary = {
+        "label": selected_material.nome if selected_material is not None else "Todos os materiais",
+        "total": stock_total,
+        "allocated": stock_allocated,
+        "available": stock_total - stock_allocated,
+        "is_inconsistent": stock_allocated > stock_total,
+    }
+    material_cards = _material_dashboard_cards()
+
     return {
         "total_points": total_points,
         "total_municipios": total_municipios,
         "total_territorios": total_territorios,
         "total_materiais": total_materiais,
-        "total_banners": total_banners,
+        "total_stock_allocated": total_stock_allocated,
+        # Backward compatibility for existing API consumers.
+        "total_banners": total_stock_allocated,
         "recent_points": recent_points,
-        "top_banner_points": top_banner_points,
+        "top_stock_points": top_stock_points,
+        # Backward compatibility for templates/APIs still using old key.
+        "top_banner_points": top_stock_points,
         "recent_movements": recent_movements,
+        "stock_summary": stock_summary,
+        "material_cards": material_cards,
     }
 
 
@@ -202,7 +366,12 @@ def update_stock(
     observacao: str | None = None,
     origem: str = "PAINEL",
 ) -> MovimentacaoEstoque:
-    stock = EstoqueMaterial.query.filter_by(ponto_estoque_id=point.id, material_id=material.id).first()
+    material = _load_material_for_update(material.id)
+
+    stock_query = EstoqueMaterial.query.filter_by(ponto_estoque_id=point.id, material_id=material.id)
+    if _supports_row_locking():
+        stock_query = stock_query.with_for_update()
+    stock = stock_query.first()
     if stock is None:
         stock = EstoqueMaterial(ponto_estoque=point, material=material, quantidade=Decimal("0"))
         db.session.add(stock)
@@ -220,6 +389,15 @@ def update_stock(
     else:
         quantidade_posterior = quantidade
         movimento_quantidade = abs(quantidade_posterior - quantidade_anterior)
+
+    allocated_before = _sum_allocated_stock(material.id)
+    allocated_after = allocated_before - quantidade_anterior + quantidade_posterior
+    if allocated_after > Decimal(material.quantidade_total or 0):
+        available_for_point = Decimal(material.quantidade_total or 0) - (allocated_before - quantidade_anterior)
+        raise ValueError(
+            "Quantidade indisponível. Existem apenas "
+            f"{_format_quantity(max(available_for_point, Decimal('0')))} unidades disponíveis para alocação."
+        )
 
     stock.quantidade = quantidade_posterior
     movimento = MovimentacaoEstoque(

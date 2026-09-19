@@ -15,7 +15,7 @@ from app.models.movimentacao_estoque import MovimentacaoEstoque
 from app.models.ponto_estoque import PontoEstoque
 from app.models.territorio import Territorio
 from app.security import admin_required, role_required
-from app.services import update_stock
+from app.services import get_material_stock_snapshots, update_stock
 from app.utils import (
     build_whatsapp_url,
     digits_only,
@@ -106,10 +106,12 @@ def detail(ponto_id: int):
     estoque = (
         EstoqueMaterial.query.filter_by(ponto_estoque_id=ponto.id).join(EstoqueMaterial.material).order_by(Material.nome.asc()).all()
     )
+    snapshots = get_material_stock_snapshots([item.material_id for item in estoque])
     return render_template(
         "estoques/detail.html",
         ponto=ponto,
         estoque=estoque,
+        snapshots=snapshots,
         whatsapp_url=build_whatsapp_url(ponto.responsavel_whatsapp or ponto.responsavel_telefone),
     )
 
@@ -194,7 +196,25 @@ def delete(ponto_id: int):
 def update_stock_view(ponto_id: int):
     ponto = PontoEstoque.query.get_or_404(ponto_id)
     form = EstoqueMovimentacaoForm()
-    form.material_id.choices = [(m.id, m.nome) for m in Material.query.filter_by(ativo=True).order_by(Material.nome.asc()).all()]
+    materials = Material.query.filter_by(ativo=True).order_by(Material.nome.asc()).all()
+    form.material_id.choices = [(m.id, m.nome) for m in materials]
+    snapshots = get_material_stock_snapshots([material.id for material in materials])
+    point_stock_map = {
+        item.material_id: Decimal(item.quantidade or 0)
+        for item in EstoqueMaterial.query.filter_by(ponto_estoque_id=ponto.id).all()
+    }
+    material_stats = {
+        material.id: {
+            "total": float(snapshots.get(material.id, {}).get("total", Decimal("0"))),
+            "allocated": float(snapshots.get(material.id, {}).get("allocated", Decimal("0"))),
+            "available": float(snapshots.get(material.id, {}).get("available", Decimal("0"))),
+            "point_current": float(point_stock_map.get(material.id, Decimal("0"))),
+            "max_for_point": float(
+                snapshots.get(material.id, {}).get("available", Decimal("0")) + point_stock_map.get(material.id, Decimal("0"))
+            ),
+        }
+        for material in materials
+    }
     if form.validate_on_submit():
         material = Material.query.get_or_404(form.material_id.data)
         try:
@@ -212,7 +232,14 @@ def update_stock_view(ponto_id: int):
         except ValueError as exc:
             db.session.rollback()
             flash(str(exc), "danger")
-    return render_template("estoques/stock_form.html", form=form, ponto=ponto)
+    selected_material_id = form.material_id.data or (materials[0].id if materials else None)
+    return render_template(
+        "estoques/stock_form.html",
+        form=form,
+        ponto=ponto,
+        material_stats=material_stats,
+        selected_material_id=selected_material_id,
+    )
 
 
 @estoques_bp.get("/<int:ponto_id>/historico")
