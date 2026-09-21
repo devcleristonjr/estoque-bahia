@@ -117,7 +117,7 @@
           <!-- Administração -->
           <li class="nav-item">
             <a
-              class="nav-link {% if request.endpoint and request.endpoint.startswith('administracao.') %}active{% endif %}"
+              class="nav-link {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}"
               href="{{ url_for('usuarios.index') }}"
             >
               <i class="bi bi-people me-2"></i>
@@ -144,7 +144,7 @@
     <div class="d-flex min-vh-100">
 
       <!-- SIDEBAR DESKTOP -->
-      <aside class="sidebar d-none d-md-flex flex-column p-3">
+      <aside class="sidebar d-none d-md-flex flex-column p-3" aria-label="Navegação principal">
 
         <!-- IDENTIDADE -->
         <div class="mb-4">
@@ -168,7 +168,7 @@
 
           <!-- Dashboard -->
           <a
-            class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.') %}active{% endif %}"
+            class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.') and request.endpoint != 'dashboard.mapa' %}active{% endif %}"
             href="{{ url_for('dashboard.index') }}"
           >
             <i class="bi bi-speedometer2 me-2"></i>
@@ -278,7 +278,7 @@
 
 
       <!-- CONTEÚDO -->
-      <main class="flex-grow-1">
+      <main class="flex-grow-1 app-main">
 
         <div class="container-fluid p-3 p-lg-4">
 
