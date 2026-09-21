@@ -1,125 +1,583 @@
-# Estoque Bahia
+# 📦 Estoque Bahia
 
-Aplicação Flask para controle georreferenciado de pontos de estoque e materiais distribuídos pelos municípios da Bahia.
+Sistema web para **gestão, controle e acompanhamento de estoques**, desenvolvido em Flask e estruturado para atender operações com pontos de estoque, materiais, movimentações, territórios e coleta de informações em campo.
 
-## Stack
+O projeto está em desenvolvimento contínuo, com foco em uma interface simples, responsiva e adequada tanto para uso administrativo quanto para operações de coleta e atualização de estoque.
 
-- Python 3.12+
-- Flask
-- PostgreSQL
-- SQLAlchemy
-- Flask-Migrate
-- Flask-Login
-- Bootstrap 5
-- Leaflet.js + OpenStreetMap
+---
 
-## Estrutura inicial
+## 📌 Sobre o projeto
 
-- autenticação com Flask-Login
-- modelos para territórios, municípios, materiais, pontos de estoque, estoque e movimentações
-- upload de imagens em pasta organizada por ano e mês
-- dashboard, mapa e CRUD básico de materiais e pontos
-- script de importação da planilha de municípios
+O **Estoque Bahia** foi desenvolvido para centralizar informações relacionadas ao controle de materiais e estoques, permitindo acompanhar diferentes pontos de armazenamento e suas respectivas movimentações.
 
-## Configuração
+A aplicação possui uma área administrativa para gerenciamento do estoque e uma área específica de **Coleta**, destinada ao cadastro e atualização de informações diretamente relacionadas aos pontos de estoque.
 
-1. Crie um arquivo `.env` com base em `.env.example`.
-2. Para desenvolvimento local, o projeto já vem configurado para SQLite via `DATABASE_URL=sqlite+pysqlite:///estoque_bahia.db`.
-3. Ajuste `SECRET_KEY`.
+O projeto utiliza uma arquitetura baseada em **Flask, Blueprints, SQLAlchemy, Flask-Migrate e templates Jinja2**, permitindo a evolução gradual da aplicação sem concentrar toda a lógica em um único arquivo.
 
-Exemplo:
+---
 
-```env
-SECRET_KEY=uma_chave_forte
-DATABASE_URL=sqlite+pysqlite:///estoque_bahia.db
-APP_ENV=development
+## 🚧 Status atual
+
+**Em desenvolvimento ativo.**
+
+A estrutura principal da aplicação já está implementada e o sistema possui módulos funcionais para diferentes etapas do gerenciamento de estoque.
+
+### Atualmente estruturado
+
+* 🔐 Autenticação e controle de acesso
+* 📊 Dashboard
+* 🗺️ Mapa dos pontos de estoque
+* 📍 Pontos de estoque
+* 📦 Cadastro e gerenciamento de materiais
+* 🔄 Movimentações de estoque
+* 👥 Usuários
+* 🧭 Territórios
+* 🏙️ Municípios
+* 📋 Coleta de informações de estoque
+* ➕ Cadastro de novos registros através da Coleta
+* ✏️ Atualização de estoque através da Coleta
+* 📷 Suporte a informações/fotos relacionadas à coleta
+* 📍 Captura de localização através do navegador
+* 🗄️ Banco de dados com SQLAlchemy
+* 🔄 Controle de alterações do banco através de Flask-Migrate
+* 📱 Interface responsiva para utilização em diferentes dispositivos
+
+Alguns módulos administrativos e funcionalidades complementares continuam em evolução.
+
+---
+
+# 🛠️ Tecnologias
+
+## Backend
+
+* **Python**
+* **Flask**
+* **SQLAlchemy**
+* **Flask-Migrate**
+* **Flask-Login**
+* **Flask-WTF**
+* **Jinja2**
+
+## Frontend
+
+* **HTML5**
+* **CSS3**
+* **JavaScript**
+* **Bootstrap 5**
+* **Bootstrap Icons**
+
+## Mapas
+
+* **Leaflet**
+* **OpenStreetMap**
+
+## Banco de dados
+
+A aplicação utiliza SQLAlchemy como camada de acesso ao banco e Flask-Migrate para gerenciamento das migrações.
+
+O banco utilizado pode variar de acordo com a configuração do ambiente.
+
+---
+
+# 🧩 Principais módulos
+
+## 📊 Dashboard
+
+Área inicial do sistema destinada à visualização geral das informações do estoque.
+
+---
+
+## 🗺️ Mapa
+
+Visualização dos pontos de estoque utilizando mapa interativo.
+
+A aplicação utiliza Leaflet integrado ao OpenStreetMap para apresentação das informações geográficas.
+
+---
+
+## 📍 Pontos de estoque
+
+Permite trabalhar com os locais utilizados para armazenamento e controle dos materiais.
+
+Os pontos de estoque são utilizados como referência para as operações realizadas pelo sistema.
+
+---
+
+## 📦 Materiais
+
+Módulo responsável pelo cadastro e gerenciamento dos materiais controlados pelo sistema.
+
+Entre as operações previstas estão:
+
+* cadastro;
+* consulta;
+* atualização;
+* organização dos materiais;
+* utilização dos materiais nas operações de estoque.
+
+---
+
+## 🔄 Movimentações
+
+Área destinada ao acompanhamento das movimentações realizadas no estoque.
+
+As movimentações permitem manter o histórico das alterações relacionadas aos materiais e seus respectivos pontos de estoque.
+
+---
+
+## 👥 Usuários
+
+Módulo destinado ao gerenciamento dos usuários que possuem acesso à área administrativa do sistema.
+
+O controle de autenticação é realizado utilizando Flask-Login.
+
+---
+
+## 🧭 Territórios
+
+Estrutura utilizada para organização territorial dos pontos de estoque.
+
+---
+
+## 🏙️ Municípios
+
+Cadastro e organização dos municípios relacionados aos pontos e operações do sistema.
+
+---
+
+# 📋 Módulo de Coleta
+
+A aplicação possui uma área específica denominada **Coleta**, destinada à utilização operacional para cadastro e atualização de informações de estoque.
+
+A Coleta possui seu próprio conjunto de templates, mas utiliza a estrutura principal de navegação da aplicação.
+
+### Fluxos principais
+
+### Coleta
+
+```text
+/coleta
 ```
 
-## Instalação
+Página inicial do módulo de Coleta.
+
+### Novo registro
+
+```text
+/coleta/novo
+```
+
+Permite realizar o cadastro de informações relacionadas ao estoque.
+
+### Atualização
+
+```text
+/coleta/atualizar
+```
+
+Permite localizar um ponto de estoque para atualização.
+
+### Atualização de um ponto específico
+
+```text
+/coleta/atualizar/<ponto_id>
+```
+
+Permite realizar a atualização das informações de um ponto de estoque específico.
+
+### Resultado da operação
+
+Após determinadas operações, o sistema apresenta uma página de sucesso/resultado da coleta.
+
+---
+
+# 🏗️ Arquitetura
+
+A aplicação utiliza **Blueprints do Flask** para separar os diferentes módulos.
+
+Uma visão simplificada da arquitetura é:
+
+```text
+Flask Application
+│
+├── Autenticação
+│
+├── Dashboard
+│
+├── Mapa
+│
+├── Materiais
+│
+├── Pontos de estoque
+│
+├── Movimentações
+│
+├── Usuários
+│
+├── Territórios
+│
+├── Municípios
+│
+└── Coleta
+    ├── Início
+    ├── Novo
+    ├── Atualização
+    ├── Atualização por ponto
+    └── Sucesso
+```
+
+A camada visual utiliza templates Jinja2 com herança de templates.
+
+A estrutura principal segue o conceito:
+
+```text
+base.html
+    │
+    └── coleta_public/base.html
+            │
+            ├── index.html
+            ├── novo.html
+            ├── atualizar.html
+            ├── atualizar_busca.html
+            └── sucesso.html
+```
+
+Dessa forma, o menu lateral e a navegação principal permanecem centralizados no layout principal da aplicação.
+
+---
+
+# 📁 Estrutura do projeto
+
+A estrutura geral segue uma organização semelhante a:
+
+```text
+estoque-bahia/
+│
+├── app/
+│   ├── models/
+│   ├── routes/
+│   ├── forms/
+│   ├── templates/
+│   │   ├── base.html
+│   │   └── coleta_public/
+│   │       ├── base.html
+│   │       ├── index.html
+│   │       ├── novo.html
+│   │       ├── atualizar.html
+│   │       ├── atualizar_busca.html
+│   │       └── sucesso.html
+│   │
+│   └── static/
+│       ├── css/
+│       ├── js/
+│       └── ...
+│
+├── migrations/
+│
+├── scripts/
+│
+├── tests/
+│
+├── uploads/
+│
+├── config.py
+├── run.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+A estrutura pode evoluir conforme novos módulos e serviços sejam incorporados ao projeto.
+
+---
+
+# ⚙️ Requisitos
+
+Para executar o projeto localmente, recomenda-se ter instalado:
+
+* Python 3.10 ou superior
+* pip
+* ambiente virtual Python
+* banco de dados configurado conforme o ambiente
+
+---
+
+# 🚀 Instalação
+
+## 1. Clonar o repositório
+
+```bash
+git clone https://github.com/devcleristonjr/estoque-bahia.git
+```
+
+Entrar no diretório:
+
+```bash
+cd estoque-bahia
+```
+
+---
+
+## 2. Criar o ambiente virtual
+
+### Windows
 
 ```bash
 python -m venv .venv
+```
+
+Ativar:
+
+```bash
 .venv\Scripts\activate
+```
+
+### Linux/macOS
+
+```bash
+python3 -m venv .venv
+```
+
+Ativar:
+
+```bash
+source .venv/bin/activate
+```
+
+---
+
+## 3. Instalar as dependências
+
+```bash
 pip install -r requirements.txt
 ```
 
-## Migrações
+---
+
+# 🔐 Configuração do ambiente
+
+Crie o arquivo `.env` a partir do exemplo disponível no projeto:
 
 ```bash
-flask --app run.py db upgrade
+.env.example
 ```
 
-Inclui também a tabela de controle do fechamento diário para evitar execução duplicada.
+Configure as variáveis necessárias para o ambiente local.
 
-Se você quiser voltar para PostgreSQL no futuro, basta trocar `DATABASE_URL` para o formato `postgresql+psycopg://usuario:senha@host:5432/banco`.
+> O arquivo `.env` não deve ser versionado no Git.
 
-Se precisar criar um novo administrador inicial:
+---
+
+# 🗄️ Banco de dados
+
+O projeto utiliza **SQLAlchemy** para interação com o banco e **Flask-Migrate** para controle das alterações da estrutura do banco.
+
+Após configurar o ambiente, execute as migrações disponíveis:
 
 ```bash
-flask --app run.py create-admin
+flask db upgrade
 ```
 
-Para executar manualmente o fechamento diário de estoque (mesma rotina usada em produção):
+Quando forem criadas novas alterações estruturais no banco, uma nova migration deverá ser gerada e posteriormente aplicada.
+
+---
+
+# ▶️ Executando o projeto
+
+Com o ambiente virtual ativado:
 
 ```bash
-flask --app run.py zerar-estoques
+python run.py
 ```
 
-Para testar com uma data específica (idempotência por data local da Bahia):
+ou, conforme a configuração do ambiente:
 
 ```bash
-flask --app run.py zerar-estoques --data-referencia 2026-09-18
+flask run
 ```
 
-## Execução
+Depois, acesse a aplicação pelo endereço disponibilizado pelo servidor Flask.
+
+Em ambiente local, normalmente:
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+# 🔄 Migrações
+
+Para criar uma nova migration após alterações nos modelos:
 
 ```bash
-flask --app run.py run
+flask db migrate -m "descricao da alteracao"
 ```
 
-## Timezone oficial
-
-Todas as operações de data/hora usam timezone de Salvador/Bahia (`America/Bahia`, com fallback para `America/Sao_Paulo`).
-
-## Agendamento diário de zeramento (23:00 Bahia)
-
-O projeto não mantém scheduler interno no Flask (sem loop/sleep). O recomendado é agendar o comando CLI no sistema operacional do servidor.
-
-Exemplo Linux (cron):
+Depois:
 
 ```bash
-0 23 * * * cd /caminho/estoque-bahia && TZ=America/Bahia flask --app run.py zerar-estoques >> /var/log/estoque-bahia-reset.log 2>&1
+flask db upgrade
 ```
 
-Exemplo Windows (Task Scheduler):
+Antes de aplicar migrations em produção, recomenda-se revisar o arquivo gerado.
 
-```powershell
-schtasks /Create /TN "EstoqueBahia-ZeramentoDiario" /SC DAILY /ST 23:00 /TR "cmd /c cd /d C:\caminho\estoque-bahia && flask --app run.py zerar-estoques >> logs\zeramento.log 2>&1"
+---
+
+# 🧪 Testes
+
+Os testes ficam organizados no diretório:
+
+```text
+tests/
 ```
 
-## Importação geográfica
+Para executar os testes, utilize o framework configurado no projeto.
 
-Se a planilha `Municipios Bahia.xlsx` estiver disponível, execute:
+Exemplo:
 
 ```bash
-python scripts/import_municipios.py --file "Municipios Bahia.xlsx"
+pytest
 ```
 
-Se o arquivo não existir, o script apenas informa e encerra sem quebrar a aplicação.
+A cobertura de testes deve continuar sendo ampliada principalmente nas áreas relacionadas a:
 
-## O que já está pronto
+* autenticação;
+* materiais;
+* estoque;
+* movimentações;
+* coleta;
+* permissões;
+* regras de atualização de estoque.
 
-- login e logout
-- dashboard base
-- mapa focado na Bahia
-- cadastro de materiais
-- cadastro de pontos de estoque
-- movimentação inicial de estoque
-- upload de foto com validação básica
-- estrutura de API JSON preparada
+---
 
-## Próximos passos naturais
+# 🕐 Operações programadas
 
-1. Refinar o fluxo de edição de estoque e o histórico.
-2. Adicionar CRUD administrativo para usuários, territórios e municípios.
-3. Implementar seeds opcionais de demonstração e exportações.
+Operações que precisam ser executadas diariamente ou em horários específicos devem ser realizadas por mecanismos externos ao processo principal do Flask, como:
+
+* Cron no Linux;
+* Agendador de Tarefas do Windows;
+* serviços de agendamento do ambiente de produção.
+
+Isso evita manter processos contínuos dentro das requisições da aplicação web.
+
+---
+
+# 📱 Responsividade
+
+A interface utiliza Bootstrap e foi estruturada para funcionar em:
+
+* computadores;
+* notebooks;
+* tablets;
+* smartphones.
+
+A área de Coleta possui atenção especial ao uso em dispositivos móveis, considerando que sua finalidade inclui operações realizadas diretamente nos pontos de estoque.
+
+---
+
+# 🔒 Segurança
+
+O projeto utiliza recursos do ecossistema Flask para proteção e controle de acesso, incluindo:
+
+* autenticação de usuários;
+* gerenciamento de sessão;
+* proteção de formulários;
+* validação de dados;
+* controle de acesso às áreas administrativas;
+* utilização de variáveis de ambiente para configurações sensíveis.
+
+Informações como senhas, chaves secretas e credenciais de banco de dados não devem ser armazenadas diretamente no código ou publicadas no repositório.
+
+---
+
+# 🗺️ Geolocalização
+
+A área de Coleta pode utilizar a API de geolocalização disponível no navegador para obter a localização do usuário durante uma operação.
+
+O funcionamento depende da autorização do usuário para compartilhamento da localização pelo navegador.
+
+---
+
+# 📷 Uploads
+
+O sistema possui estrutura para armazenamento de arquivos enviados durante determinadas operações.
+
+Arquivos enviados devem ser tratados com validação adequada de:
+
+* extensão;
+* tamanho;
+* nome do arquivo;
+* tipo de conteúdo;
+* local de armazenamento.
+
+---
+
+# 📈 Próximas evoluções
+
+O projeto continuará sendo desenvolvido de forma incremental.
+
+Entre as áreas que podem receber evolução estão:
+
+* aprimoramento da interface;
+* refinamento do fluxo de edição de estoque;
+* histórico detalhado de movimentações;
+* aprimoramento dos módulos administrativos;
+* gerenciamento de usuários;
+* gerenciamento de territórios;
+* gerenciamento de municípios;
+* melhoria da experiência mobile;
+* ampliação da cobertura de testes;
+* relatórios e exportações;
+* melhorias de desempenho;
+* aperfeiçoamento das regras de segurança.
+
+Novas funcionalidades devem ser incorporadas preservando a separação entre os módulos e a estrutura de navegação existente.
+
+---
+
+# 🧭 Princípios de desenvolvimento
+
+O projeto segue alguns princípios para facilitar sua manutenção:
+
+### 1. Evitar duplicação
+
+Layouts, componentes e comportamentos compartilhados devem ser reutilizados sempre que possível.
+
+### 2. Separação de responsabilidades
+
+Rotas, modelos, formulários, templates e regras de negócio devem permanecer organizados em suas respectivas camadas.
+
+### 3. Evolução incremental
+
+Novas funcionalidades devem ser adicionadas sem comprometer os módulos que já estão funcionando.
+
+### 4. Banco controlado por migrations
+
+Alterações estruturais do banco devem ser realizadas através do Flask-Migrate.
+
+### 5. Interface consistente
+
+O menu, navegação e elementos visuais principais devem permanecer consistentes em todo o sistema.
+
+---
+
+# 🌐 Repositório
+
+Código-fonte:
+
+https://github.com/devcleristonjr/estoque-bahia
+
+---
+
+# 📄 Licença
+
+A definição da licença deve seguir o que estiver estabelecido no repositório e nos termos definidos pelos responsáveis pelo projeto.
+
+---
+
+## 📌 Projeto em desenvolvimento
+
+O **Estoque Bahia** é um projeto em evolução. A documentação será atualizada à medida que novos módulos, funcionalidades e melhorias forem incorporados ao sistema.
